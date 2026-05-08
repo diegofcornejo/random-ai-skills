@@ -1,0 +1,7 @@
+# Local test data — never commit real findings
+findings.json
+*.findings.json
+test-data/
+.DS_Store
+__pycache__/
+*.pyc
