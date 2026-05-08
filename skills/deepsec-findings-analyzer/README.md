@@ -11,6 +11,7 @@ After running a deepsec scan, you typically end up with dozens or hundreds of fi
 - **Plan your attack** — get a prioritized action plan grouped by impact and effort
 - **Drill down on demand** — ask follow-up questions about specific findings or groups
 - **Generate ticket drafts** — turn findings into copy-paste-ready issues for your tracker
+- **Persist progress across sessions** — mark findings as `in-progress`, `wont-fix`, `needs-review`, or `fixed-manual`; the skill resumes where you left off next time
 
 ## How to use
 
@@ -194,6 +195,48 @@ After the initial report, you can ask things like:
 The skill detects this case and uses `scripts/merge-triage.py` to read triage data directly from the FileRecords and inject it into the export. From then on, analysis proceeds normally with full triage data.
 
 If/when the bug is fixed upstream, this workaround becomes a no-op (the script detects existing triage and skips the merge), so the skill keeps working without changes.
+
+## State persistence (multi-session triage)
+
+Triage of large scans (100+ findings) doesn't fit in one sitting. The skill keeps a sidecar JSON file at:
+
+```
+<deepsec data dir>/<projectId>/findings-status.json
+```
+
+Default lookup walks `data/<projectId>/`, `.deepsec/data/<projectId>/`, and the parent of `findings.json` to find the right deepsec project directory. If none exists, the sidecar lands next to `findings.json` (with a stderr warning).
+
+### State model
+
+| State | Where it lives | Set by |
+|-------|---------------|--------|
+| `fixed` | native `metadata.revalidation.verdict` | `deepsec revalidate` (verifies via git history) |
+| `false-positive` | native `metadata.revalidation.verdict` | `deepsec revalidate` |
+| `true-positive` / `uncertain` | native `metadata.revalidation.verdict` | `deepsec revalidate` |
+| `in-progress` | sidecar | the skill / user |
+| `wont-fix` | sidecar | the skill / user |
+| `needs-review` | sidecar | the skill / user |
+| `fixed-manual` | sidecar | the skill / user (no git verification) |
+
+Native verdicts always win over sidecar state when both exist for `fixed` / `false-positive`. The sidecar fills only the gap states deepsec doesn't have. To mark something `fixed` or `false-positive` rigorously, run `deepsec revalidate` — the skill will offer this as a hybrid option whenever you ask to mark a finding fixed/FP.
+
+### Session log
+
+Every skill invocation opens a session entry: timestamps, decisions made, optional one-line summary. When you start a new session, the skill reads the last entry and asks whether to resume from `in-progress`, start a fresh pass over `unreviewed`, or regenerate a full report.
+
+CLI for direct inspection (the skill calls these for you):
+
+```bash
+python3 scripts/state.py summary findings.json          # effective state + last session
+python3 scripts/state.py orphans findings.json          # sidecar keys with no matching finding
+python3 scripts/state.py mark findings.json '<key>' in-progress --session <sid>
+python3 scripts/state.py session-open findings.json     # returns sessionId
+python3 scripts/state.py session-close findings.json <sid> --summary "..."
+```
+
+Finding key format: `<filePath>::<vulnSlug>::<firstLineNumber>`.
+
+> The sidecar is deepsec-data-adjacent, not codebase-adjacent. If you want to share triage progress with teammates, commit `data/<projectId>/findings-status.json`. If not, leave it gitignored.
 
 ## What this skill is NOT
 

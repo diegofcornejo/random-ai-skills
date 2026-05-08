@@ -2,9 +2,12 @@
 """
 Validate that a file is a deepsec JSON export.
 
-Usage: python3 validate.py <path_to_findings.json>
+Usage:
+  python3 validate.py <path_to_findings.json>
+  python3 validate.py <path_to_findings.json> --check-state [--data-dir <dir>]
 
 Exits 0 on success, prints stats. Exits 1 with a descriptive error on failure.
+With --check-state, also validates the sidecar (findings-status.json) shape.
 """
 
 import json
@@ -16,6 +19,7 @@ REQUIRED_TOP_LEVEL_KEYS = ["title", "description", "severity", "metadata"]
 REQUIRED_METADATA_KEYS = ["projectId", "filePath", "severity", "vulnSlug"]
 KNOWN_SEVERITIES = {"CRITICAL", "HIGH", "HIGH_BUG", "MEDIUM", "LOW", "BUG"}
 KNOWN_VERDICTS = {"true-positive", "false-positive", "fixed", "uncertain", None}
+SIDECAR_STATES = {"in-progress", "wont-fix", "needs-review", "fixed-manual"}
 
 
 def validate(path: str) -> tuple[bool, str]:
@@ -92,19 +96,86 @@ def print_summary(path: str) -> None:
     print(f"  Severities: {dict(severities)}")
 
 
-def main():
-    if len(sys.argv) != 2:
-        print("Usage: validate.py <path_to_findings.json>", file=sys.stderr)
-        sys.exit(2)
+def validate_sidecar(sidecar_path: Path, expected_project_id: str) -> tuple[bool, str]:
+    if not sidecar_path.exists():
+        return True, f"(no sidecar yet at {sidecar_path})"
 
-    path = sys.argv[1]
-    ok, error = validate(path)
+    try:
+        with open(sidecar_path) as f:
+            data = json.load(f)
+    except json.JSONDecodeError as e:
+        return False, f"sidecar is not valid JSON: {e}"
+
+    if not isinstance(data, dict):
+        return False, f"sidecar root is not an object (got {type(data).__name__})"
+
+    if data.get("version") != 1:
+        return False, f"sidecar version is {data.get('version')!r}, expected 1"
+
+    if data.get("projectId") != expected_project_id:
+        return False, (
+            f"sidecar projectId {data.get('projectId')!r} != findings projectId "
+            f"{expected_project_id!r}"
+        )
+
+    findings = data.get("findings", {})
+    if not isinstance(findings, dict):
+        return False, "sidecar.findings is not an object"
+    for key, entry in findings.items():
+        if not isinstance(entry, dict):
+            return False, f"sidecar.findings[{key!r}] is not an object"
+        st = entry.get("state")
+        if st not in SIDECAR_STATES:
+            return False, (
+                f"sidecar.findings[{key!r}].state is {st!r}, "
+                f"expected one of {sorted(SIDECAR_STATES)}"
+            )
+
+    sessions = data.get("sessions", [])
+    if not isinstance(sessions, list):
+        return False, "sidecar.sessions is not an array"
+    for i, s in enumerate(sessions):
+        if not isinstance(s, dict) or not s.get("sessionId") or not s.get("startedAt"):
+            return False, f"sidecar.sessions[{i}] missing sessionId or startedAt"
+
+    return True, (
+        f"sidecar OK ({len(findings)} state entries, {len(sessions)} sessions)"
+    )
+
+
+def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(prog="validate.py", description=__doc__)
+    parser.add_argument("findings", type=Path)
+    parser.add_argument("--check-state", action="store_true")
+    parser.add_argument("--data-dir", type=Path, default=None)
+    args = parser.parse_args()
+
+    ok, error = validate(str(args.findings))
 
     if not ok:
         print(f"✗ Invalid: {error}", file=sys.stderr)
         sys.exit(1)
 
-    print_summary(path)
+    print_summary(str(args.findings))
+
+    if args.check_state:
+        sys.path.insert(0, str(Path(__file__).parent))
+        import state as state_mod  # noqa: E402
+
+        try:
+            pid = state_mod.read_project_id(args.findings)
+            sidecar_path = state_mod.resolve_sidecar_path(args.findings, args.data_dir)
+        except (ValueError, FileNotFoundError) as e:
+            print(f"✗ Sidecar resolution failed: {e}", file=sys.stderr)
+            sys.exit(1)
+
+        ok2, msg = validate_sidecar(sidecar_path, pid)
+        if not ok2:
+            print(f"✗ Sidecar invalid: {msg}", file=sys.stderr)
+            sys.exit(1)
+        print(f"✓ {msg}")
 
 
 if __name__ == "__main__":

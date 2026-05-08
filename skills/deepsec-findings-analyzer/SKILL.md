@@ -100,13 +100,51 @@ find data/*/files -name "*.json" -exec grep -l '"triage"' {} \; 2>/dev/null | he
 
    Wait for the user's response. **Never run `deepsec triage` without explicit permission** — it costs money (or quota) and the user must consent.
 
-### Step 3: Privacy reminder
+### Step 3: Load state sidecar and show resume hint
+
+The skill is multi-session. Native deepsec verdicts (`metadata.revalidation.verdict`) cover `fixed` and `false-positive`, but human-curated states like `in-progress`, `wont-fix`, `needs-review`, and `fixed-manual` live in a sidecar at `<deepsec data dir>/<projectId>/findings-status.json`. The sidecar also stores a session log so the skill can answer "what did we do last time?".
+
+Run:
+
+```bash
+python3 scripts/state.py summary <findings.json>
+```
+
+This prints the effective state distribution (sidecar + native verdicts merged) and the last session's id, timestamps, and summary. Use it to:
+
+1. **Greet the user with a resume context** when a previous session exists. Example:
+
+   ```
+   I see you ran a session on 2026-05-07 ("Triaged P0 SSRF group, 3 in-progress").
+   Current state: 12 unreviewed, 3 in-progress, 5 wont-fix, 8 native:fixed,
+   2 native:false-positive, 92 native:true-positive (out of 122).
+
+   Want to (a) resume from in-progress, (b) start a new pass over unreviewed,
+   or (c) generate a fresh full report?
+   ```
+
+2. **Skip already-decided findings** in subsequent analysis unless the user asks to re-open. `native:fixed` and `native:false-positive` should be excluded from "to-fix" plans by default. `wont-fix` likewise.
+
+3. **Detect orphans** if findings.json was regenerated and some sidecar keys no longer match. Run `python3 scripts/state.py orphans <findings.json>` and report them; let the user decide (re-key manually, or leave as historical record). Never auto-delete sidecar entries.
+
+If the sidecar doesn't exist yet, the summary will show `Exists: False` and 0 sessions — that's fine, this is a first run.
+
+**Effective state precedence** (state.py implements this; do not second-guess it):
+
+1. `revalidation.verdict == "fixed"` → wins (verified via git history).
+2. `revalidation.verdict == "false-positive"` → wins (verified by AI).
+3. Sidecar state (`in-progress`, `wont-fix`, `needs-review`, `fixed-manual`) → wins over `true-positive` and `uncertain`.
+4. `revalidation.verdict == "true-positive"` → fallback.
+5. `revalidation.verdict == "uncertain"` → fallback.
+6. None of the above → `unreviewed`.
+
+### Step 4: Privacy reminder
 
 Before producing any output, briefly remind the user:
 
 > 🔒 Note: `findings.json` contains code snippets and exploitation reasoning for real vulnerabilities. Keep it out of public repos and don't paste its contents into untrusted services. The reports I generate will summarize findings but you should still review where you store them.
 
-### Step 4: Ask for analysis depth
+### Step 5: Ask for analysis depth
 
 Ask the user which level of analysis they want. Use this exact wording:
 
@@ -124,13 +162,25 @@ Type 1, 2, or 3.
 
 Wait for the response. Default to [2] if the user is ambiguous.
 
-### Step 5: Generate the report
+### Step 6: Open a session
+
+Before doing any analysis or letting the user mutate state, open a session in the sidecar:
+
+```bash
+python3 scripts/state.py session-open <findings.json>
+```
+
+It prints a `sessionId` on stdout. Hold onto it — every state mutation in this conversation should pass `--session <id>` so the decision log is grouped under one session entry. If the user makes no decisions, the session stays empty (harmless).
+
+### Step 7: Generate the report
 
 Run the analysis at the level the user chose. See `analysis-levels.md` for the detailed protocol of each level.
 
 Output a single Markdown document. Do NOT split across multiple files. The user wants a portable artifact they can paste into a ticket, share with their team, or save.
 
-### Step 6: Offer drill-down
+When the report is generated for a session that already has prior state, exclude `native:fixed`, `native:false-positive`, and `wont-fix` findings from the "to-fix" plan by default. Show them in a separate "previously decided" section so the user can scan the history without losing focus on actionable work.
+
+### Step 8: Offer drill-down and state mutation
 
 After delivering the report, end with:
 
@@ -146,10 +196,67 @@ The report is ready. You can ask me follow-up questions like:
 - "Group findings differently — by [criterion]"
 - "Generate a ticket draft for [group/finding]"
 
-What would you like to explore?
+Or update state across the session:
+
+- "Mark [finding] as in-progress"
+- "Mark [finding] as wont-fix"
+- "Mark [group] as needs-review"
+- "Show me everything that's in-progress"
+
+When you're done, say "wrap up" and I'll save a session summary so we can pick up next time.
 ```
 
 Then wait for user input. For drill-down requests, refer to the relevant finding(s) in the JSON and respond accordingly. Be specific — quote line numbers, paths, and the agent's original reasoning when relevant.
+
+#### State mutation rules
+
+When the user asks to mark a finding's state, run:
+
+```bash
+python3 scripts/state.py mark <findings.json> <key> <state> --session <sessionId>
+```
+
+The key format is `<filePath>::<vulnSlug>::<firstLineNumber>`. To find a key for a finding the user named, look it up in the JSON yourself — never ask the user for the raw key.
+
+**Hybrid path for `fixed` and `false-positive`** (these are native deepsec verdicts; the sidecar's `fixed-manual` is a fallback):
+
+- If the user says "this is fixed" → first ask whether they want a rigorous verification, **and disclose that revalidate has a real cost**:
+
+  ```
+  I can verify this two ways:
+
+  (a) Run `deepsec revalidate` scoped to this finding. Deepsec re-investigates
+      with AI + git history and produces a native `revalidation.verdict=fixed`
+      verdict that wins precedence over any sidecar state. **This costs real
+      money or quota** — deepsec docs put `revalidate` "comparable to `process`"
+      (architecture.md), and `process` is the expensive stage (~$0.25–$0.60 per
+      file at batch scale, with cost swinging 2–3x on file complexity, per
+      docs/faq.md). Single-file scoped runs aren't priced in the docs and may
+      run higher relative to per-file batch averages. Use `--limit` or run on
+      one file first to calibrate before committing to a larger batch.
+
+  (b) Mark `fixed-manual` in the sidecar immediately. Free and instant, but no
+      verification — if you're wrong, the bug stays open and the sidecar lies.
+
+  Which do you prefer?
+  ```
+
+  Default-recommend (a) for high/critical severity, (b) for low/bug. Always show the cost disclosure — never run revalidate without the user seeing it first.
+
+- If the user says "this is a false positive" → strongly recommend `deepsec revalidate` (the native verdict carries `false-positive` cleanly), **but show the same cost disclosure**. Only use sidecar `wont-fix` if the user explicitly wants to dismiss without re-validation.
+
+- **Batching tip.** If the user wants to verify multiple findings in the same file, group them with `--filter <path> --only-slugs <slug,…>` so revalidate covers all of them in one run. Co-located findings revalidate together — fewer separate runs means less setup overhead.
+
+**Wrap-up.** When the user says "wrap up", "done", "save and exit", or similar:
+
+1. Generate a one-line summary of the session (decisions made, groups touched).
+2. Run:
+
+   ```bash
+   python3 scripts/state.py session-close <findings.json> <sessionId> --summary "..."
+   ```
+
+3. Tell the user the sidecar path so they know where state persists.
 
 ## Critical rules
 
@@ -159,13 +266,17 @@ Then wait for user input. For drill-down requests, refer to the relevant finding
 - **Respect privacy**: do not write the full content of findings to disk unless the user asks. Reports go to chat unless requested otherwise.
 - **Don't run `deepsec export`** without explicit user permission.
 - **Don't read source files** unless the user chose level [3] analysis or asks during drill-down.
+- **Don't run `deepsec revalidate`** without explicit user permission AND a visible cost disclosure pointing to deepsec's official cost guidance ([faq.md](https://github.com/vercel-labs/deepsec/blob/main/docs/faq.md), [architecture.md](https://github.com/vercel-labs/deepsec/blob/main/docs/architecture.md)). Asking permission without flagging that there's a real cost is not consent. Don't quote specific dollar amounts the docs don't guarantee.
+- **Native verdicts win.** Never override `revalidation.verdict=fixed` or `=false-positive` with a sidecar state. The sidecar fills the gap states deepsec doesn't have; it doesn't replace deepsec's own.
+- **Never auto-delete sidecar entries.** Orphans (sidecar keys with no matching finding) are reported, not removed.
 
 ## File references
 
 - `analysis-levels.md` — Detailed protocol for each of the 3 analysis levels
 - `report-templates.md` — Markdown templates for each level's report output
 - `scripts/validate.py` — Validates that a file is a valid deepsec JSON export
-- `scripts/stats.py` — Computes deterministic statistics (use for level [1] and as foundation for [2] and [3])
+- `scripts/stats.py` — Computes deterministic statistics (use `--state` for effective state distribution)
 - `scripts/group.py` — Groups findings by various criteria (slug+module, file, severity)
 - `scripts/merge-triage.py` — Workaround for [deepsec#64](https://github.com/vercel-labs/deepsec/issues/64): reads triage data from FileRecords and injects it into the JSON export
+- `scripts/state.py` — Sidecar state manager: load/mark/session-open/session-close/orphans/summary
 - `examples/` — Example reports at each level for reference
