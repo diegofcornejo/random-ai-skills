@@ -36,6 +36,16 @@ Triage security findings from a [deepsec](https://github.com/vercel-labs/deepsec
 - You need to prioritize fixes for a `findings.json` file
 - You want to convert findings into copy-paste tickets for your tracker
 
+### [dead-code-hunter](skills/dead-code-hunter)
+
+Detect and safely remove dead code in JS/TS projects (Node, React, monorepos) — orphan files, unused exports, unreferenced imports, unused dependencies. Diagnoses with multiple signals, proposes a risk-ordered removal plan, and executes in reversible batches only after approval.
+
+**Use when:**
+
+- You want to find dead code, orphan exports/files, or unused dependencies
+- You're cleaning up imports or trying to reduce bundle size
+- You need a safe, reviewable plan before deleting anything
+
 ## Repository Layout
 
 ```
