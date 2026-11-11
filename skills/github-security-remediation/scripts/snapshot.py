@@ -161,7 +161,7 @@ def build_snapshot(raw, generated_at):
     # Ruling R22: "at zero" needs every source readable; 0 open with a scanner missing is partial.
     full = {c["repo"] for c in coverage if all(c.get(s) == "ok" for s in SOURCES)}
     with_open = {a["repo"] for a in open_alerts}
-    clusters = score.build_clusters(alerts)
+    clusters = score.build_clusters(alerts, single_repo=len(coverage) == 1)
     snap = {
         "schema": SCHEMA,
         "generated_at": generated_at,

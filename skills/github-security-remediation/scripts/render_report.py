@@ -636,26 +636,33 @@ def _section_top_risk(ctx):
 
 def _section_campaigns(ctx):
     t = ctx.t
+    single = (ctx.s.get("scope") or {}).get("mode") == "repo"
+    sfx = "_repo" if single else ""
     clusters = sorted(ctx.s.get("clusters") or [],
                       key=lambda c: (-_int(c.get("repos")), -_int(c.get("alerts")), str(c.get("key"))))
     moves = {} if ctx.baseline else {c.get("key"): c for c in ctx.d.get("clusters") or []}
-    out = [_note(t("campaigns.lead"), "lead")]
+    out = [_note(t(f"campaigns.lead{sfx}"), "lead")]
     if not clusters:
-        out.append(_note(t("campaigns.empty")))
+        out.append(_note(t(f"campaigns.empty{sfx}")))
     else:
         rows = []
         for c in clusters:
             fix = _code(c.get("fix")) or t("alert.no_fix")
             if str(c.get("key", "")).startswith("angular:"):
                 fix += "<br>" + _chip("flag-chip", t("campaigns.angular"))
+            if _int(c.get("unpatched")):
+                fix += "<br>" + _chip("flag-chip", t("campaigns.unpatched", n=_int(c.get("unpatched"))))
             m = moves.get(c.get("key"))
             change = (_move_text(t, m) if m else ("—" if ctx.baseline else t("campaigns.unchanged")))
-            rows.append([fix, f'{_code(c.get("package"))} <span class="muted">{e(c.get("ecosystem"))}</span>',
-                         _code(c.get("advisory")) or "—", _int(c.get("repos")), _int(c.get("alerts")),
-                         _band_chip(c.get("max_band")), change])
-        out.append(_table([(t("col.fix"), ""), (t("col.package"), ""), (t("col.advisory"), ""),
-                           (t("col.repos"), "num"), (t("col.alerts"), "num"), (t("col.max_band"), "c-chip"),
-                           (t("col.change"), "num")], rows))
+            pkg = f'{_code(c.get("package"))} <span class="muted">{e(c.get("ecosystem"))}</span>'
+            # A single-repo report has no repos column; it counts the advisories one upgrade closes instead.
+            middle = ([_int(c.get("advisories"))] if single
+                      else [_code(c.get("advisory")) or "—", _int(c.get("repos"))])
+            rows.append([fix, pkg, *middle, _int(c.get("alerts")), _band_chip(c.get("max_band")), change])
+        middle_head = ([(t("col.advisories"), "num")] if single
+                       else [(t("col.advisory"), ""), (t("col.repos"), "num")])
+        out.append(_table([(t("col.fix"), ""), (t("col.package"), ""), *middle_head, (t("col.alerts"), "num"),
+                           (t("col.max_band"), "c-chip"), (t("col.change"), "num")], rows))
     # Ruling R10: a campaign is completed only when no open alert matches its key any more. A key
     # that fell below the 2-repo threshold but still has open alerts is listed separately.
     # Ruling R21: alerts hidden by lost coverage are unknown, so such a key is never completed.
@@ -677,7 +684,7 @@ def _section_campaigns(ctx):
     if unconfirmed:
         out.append(_note(f'<strong>{t("campaigns.unconfirmed")}</strong> {moved(unconfirmed)}'))
     if shrunk:
-        out.append(_note(f'<strong>{t("campaigns.shrunk")}</strong> {moved(shrunk)}'))
+        out.append(_note(f'<strong>{t(f"campaigns.shrunk{sfx}")}</strong> {moved(shrunk)}'))
     return "".join(out)
 
 
@@ -696,7 +703,8 @@ def _section_waves(ctx):
         alerts = [ctx.alerts[alert_key(r)] for r in w.get("alerts") or []
                   if isinstance(r, dict) and alert_key(r) in ctx.alerts]
         title = t(f"wave.{n}.title") if n in WAVES else e(n)
-        desc = t(f"wave.{n}.desc") if n in WAVES else ""
+        desc = (t(f"wave.{n}.desc_repo") if n == 2 and (ctx.s.get("scope") or {}).get("mode") == "repo"
+                else t(f"wave.{n}.desc")) if n in WAVES else ""
         stats = t("waves.stats", alerts=t.count(len(alerts), "alert"), repos=t.count(len(w.get("repos") or []), "repo"))
         out.append(f'<div class="wave wave-{n}"><div class="wave-head"><h3>{title}</h3>'
                    f'<span class="wave-stats">{stats}</span></div><p class="note">{desc}</p>')
