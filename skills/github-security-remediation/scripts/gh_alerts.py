@@ -289,6 +289,22 @@ def fetch_owner(client, owner, include_archived=False, cache_dir=None):
     return out
 
 
+def fetch_repos(client, full_names):
+    """Owner entries for an explicit repo list (strategy "repo-filter"), grouped by GitHub's owner login.
+    Named repos are fetched even when archived: naming one is the request."""
+    owners = {}
+    for full_name in full_names:
+        meta = client.get(f"repos/{full_name}")
+        login = (meta.get("owner") or {}).get("login") or meta["full_name"].split("/")[0]
+        entry = owners.get(login.lower())
+        if entry is None:
+            kind = "org" if (meta.get("owner") or {}).get("type") == "Organization" else "user"
+            entry = owners[login.lower()] = {"owner": login, "type": kind, "strategy": "repo-filter", "repos": []}
+        if all(r["repo"] != meta["full_name"] for r in entry["repos"]):
+            entry["repos"].append(fetch_repo(client, meta))
+    return [owners[k] for k in sorted(owners)]
+
+
 def _fetch_single_repo(client, full_name):
     info = client.get(f"users/{full_name.split('/')[0]}")
     meta = client.get(f"repos/{full_name}")

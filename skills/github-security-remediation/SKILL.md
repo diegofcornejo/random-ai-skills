@@ -46,7 +46,7 @@ Then run scripts as `python3 <skill-dir>/scripts/<cli>.py …` with an **absolut
 | CLI | Purpose | Writes |
 |-----|---------|--------|
 | `analyze_repo.py [--repo OWNER/NAME] [--host H]` | One repo: snapshot + open Dependabot PRs + repo meta + Autofix status | nothing (JSON to stdout) |
-| `run_portfolio.py --owner X [--owner Y …] [--host H] [--out DIR] [--lang L] [--include-archived] [--date YYYY-MM-DD]` | Fetch, snapshot, diff and render a portfolio day | `<out>/<scope>/<date>/` |
+| `run_portfolio.py (--owner X [--owner Y …] \| --repo OWNER/NAME [--repo …]) [--host H] [--out DIR] [--lang L] [--include-archived] [--date YYYY-MM-DD]` | Fetch, snapshot, diff and render a report day, for whole owners or only the named repos | `<out>/<scope>/<date>/` |
 | `render_report.py --dir DAY_DIR [--lang L] [--narrative FILE]` | Re-render `report.html` + `summary.txt` for a day folder | the day folder |
 | `secret_redact.py show PATH START END --commit SHA [--start-column C --end-column C]`, `secret_redact.py replace PATH START END --commit SHA` (stdin), `secret_redact.py diff [--cached \| --commit REV] [PATH …]` | View (exact column span masked, or whole line redacted), replace, and diff (structure only) secret-bearing lines; never prints the value; `show`/`replace` refuse a location that changed since the alert's `commit_sha` ([playbooks/secrets.md](references/playbooks/secrets.md)) | `replace` edits that file only |
 | `dismiss.py --repo O/N --source dependabot\|code_scanning\|secret_scanning --number N --reason R --comment TEXT [--host H] [--dry-run]` | Dismiss/resolve one alert (validated reason, ≤280-char comment) | one PATCH on GitHub |
@@ -58,9 +58,9 @@ Then run scripts as `python3 <skill-dir>/scripts/<cli>.py …` with an **absolut
 | Mode | Pick it when the request mentions… |
 |------|------------------------------------|
 | **Repo** | analyzing / planning / fixing security alerts for *this* repo; "vulnerabilities", "Dependabot", "code scanning", "secret scanning", "Security tab", a GHSA/CVE id in this repo, "remediation plan", `SECURITY-REMEDIATION.md` |
-| **Portfolio** | the organization or an org name, "all repos", several owners, a consolidated or daily report, "security report" for a team, progress or proof for the security team |
+| **Portfolio** | the organization or an org name, "all repos", several owners, a consolidated or daily report, "security report" for a team, progress or proof for the security team; also an **HTML / daily report for this repo or named repos** (run with `--repo`) |
 
-- If the request fits both or neither (e.g. "security report" inside a repo, no owner named), **ask**: "Only this repository (plan and fixes), or a consolidated report for one or more owners?" Do not guess.
+- If the request fits both or neither (e.g. "security report" inside a repo, no owner named), **ask**: "Only this repository (plan and fixes), a daily HTML report for this repository, or a consolidated report for one or more owners?" Do not guess.
 - "Only analyze / only a report, no changes" in repo mode: run steps 1–4 (Step 4 asks the report-file decision, with the public-repo warning, before any plan file is written), present the plan as in Step 5 without the approval question, and stop. If the user wants no file at all, present the plan in the conversation only and still ask before writing anything.
 
 ## 5. Repo mode
@@ -162,9 +162,9 @@ Details in `references/execution.md` (Wrap-up).
 
 The full procedure, permissions and resume guidance are in [references/portfolio.md](references/portfolio.md). Steps:
 
-1. **Preconditions**: confirm the owner list (orgs and/or users, one `--owner` each), the host, and the output directory (default `./security-reports`, giving `<out>/<scope>/<YYYY-MM-DD>/`, where `<scope>` is the sorted owner list joined by `+` and the date is the **UTC** date). Check `gh auth status --hostname <host>`. Explain the fetch strategy (org endpoints vs per-repo "partial view") and, for large owners, the expected duration.
+1. **Preconditions**: confirm the owner list (orgs and/or users, one `--owner` each) or, for a report on specific repositories, the repo list (one `--repo OWNER/NAME` each; for "this repo", take it from `gh repo view --json nameWithOwner`), the host, and the output directory (default `./security-reports`, giving `<out>/<scope>/<YYYY-MM-DD>/`, where `<scope>` is the sorted owner list joined by `+`, or the repos as `owner__name` joined by `+`, and the date is the **UTC** date). Check `gh auth status --hostname <host>`. Explain the fetch strategy (org endpoints vs per-repo "partial view") and, for large owners, the expected duration.
 2. **Report-file decision** if the output directory is inside a git repo (section 7).
-3. **Run** `python3 <skill-dir>/scripts/run_portfolio.py --owner <o1> [--owner <o2>] --host <host> --out <dir> --lang <code>`. It fetches, snapshots, scores, clusters, diffs against the previous snapshot of the same scope, and renders the day folder. Rate-limited or interrupted → re-run the **same command**; finished repos are resumed from the cache.
+3. **Run** `python3 <skill-dir>/scripts/run_portfolio.py --owner <o1> [--owner <o2>] --host <host> --out <dir> --lang <code>` (or `--repo <owner/name> [--repo …]` instead of `--owner`). It fetches, snapshots, scores, clusters, diffs against the previous snapshot of the same scope, and renders the day folder. Rate-limited or interrupted → re-run the **same command**; finished repos are resumed from the cache.
 4. **Narrative**: write `<day_dir>/narrative.txt` in the user's language (key risks, recommended next campaign). Every number must be quoted from `snapshot.json` / `diff.json`; never compute your own.
 5. **Re-render** with the narrative: `python3 <skill-dir>/scripts/render_report.py --dir <day_dir> --lang <code> --narrative <day_dir>/narrative.txt`.
 6. **Present**: the paths, the contents of `summary.txt`, and the caveats (baseline, partial view, coverage gaps, lost coverage).

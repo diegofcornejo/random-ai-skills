@@ -31,7 +31,7 @@ SOURCES = ("dependabot", "code_scanning", "secret_scanning")
 SEVERITIES = ("critical", "high", "medium", "low", "unknown")
 BANDS = ("P1", "P2", "P3")
 COVERAGE_VALUES = ("ok", "not_enabled", "not_licensed", "no_permission", "unavailable")
-STRATEGY_KEYS = {"org-endpoints": "org_endpoints", "per-repo": "per_repo"}
+STRATEGY_KEYS = {"org-endpoints": "org_endpoints", "per-repo": "per_repo", "repo-filter": "repo_filter"}
 BASELINE_REASONS = ("first_run", "owner_set_changed", "previous_unreadable")
 WAVES = (1, 2, 3)
 DEP_SCOPES = ("runtime", "development")
@@ -370,6 +370,11 @@ def _band_bars(t, by_band):
 
 # ---------------------------------------------------------------- header
 
+def _scope_label(scope):
+    """Who the report is about: the selected repositories when filtered, otherwise the owners."""
+    return ", ".join(scope.get("repos") or scope.get("owners") or [])
+
+
 def _scope_meta(ctx):
     t, s = ctx.t, ctx.s
     scope = s.get("scope") or {}
@@ -377,6 +382,8 @@ def _scope_meta(ctx):
     mode = t("scope.mode_repo") if scope.get("mode") == "repo" else t("scope.mode_portfolio")
     items = [(t("scope.generated"), e(_ts(s.get("generated_at")))), (t("scope.host"), _code(ctx.host_label)),
              (t("scope.mode"), mode), (t("scope.owners"), e(", ".join(owners)))]
+    if scope.get("repos"):
+        items.append((t("scope.repos"), e(", ".join(scope["repos"]))))
     return '<dl class="meta">' + "".join(f"<div><dt>{k}</dt><dd>{v}</dd></div>" for k, v in items) + "</dl>"
 
 
@@ -393,6 +400,8 @@ def _scope_table(ctx):
             view = f'<span class="flag">{t("strategy.partial_view")}</span>'
         elif key == "org_endpoints":
             view = t("strategy.org_view")
+        elif key == "repo_filter":
+            view = t("strategy.repo_filter_view")
         else:
             view = "—"
         if str(owner).lower() in public_only:  # Ruling R25
@@ -841,7 +850,7 @@ def render_html(snapshot, diff, history, lang, narrative=None, today=None):
     scope = snapshot.get("scope") or {}
     slots = {
         "lang": e(effective),
-        "doc_title": e(" · ".join(x for x in (t.plain("report.title"), ", ".join(scope.get("owners") or []),
+        "doc_title": e(" · ".join(x for x in (t.plain("report.title"), _scope_label(scope),
                                                     (snapshot.get("generated_at") or "")[:10]) if x)),
         "scope_meta": _scope_meta(ctx),
         "scope_table": _scope_table(ctx),
@@ -875,7 +884,7 @@ def render_summary(snapshot, diff, lang):
     by_band = tot.get("by_band") or {}
     open_now = _int(dt.get("curr_open", tot.get("open")))
     baseline = bool(d.get("baseline", True))
-    lines = [t.plain("summary.line_title", owners=", ".join(scope.get("owners") or []),
+    lines = [t.plain("summary.line_title", owners=_scope_label(scope),
                      date=(snapshot.get("generated_at") or "")[:10])]
     if baseline:
         lines.append(t.plain("summary.open_baseline", open=open_now,

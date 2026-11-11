@@ -40,9 +40,11 @@ def _all(snap):
     return {alert_key(a): a for a in snap.get("alerts", [])}
 
 
-def _owners(snap):
-    # Ruling R23: GitHub logins are case-insensitive, so the owner set is compared case-insensitively.
-    return sorted(str(o).lower() for o in (snap.get("scope") or {}).get("owners") or [])
+def _scope_key(snap):
+    # Logins and repo names are case-insensitive on GitHub, so the scope is compared case-insensitively.
+    scope = snap.get("scope") or {}
+    return (sorted(str(o).lower() for o in scope.get("owners") or []),
+            sorted(str(r).lower() for r in scope.get("repos") or []))
 
 
 def _baseline(reason, curr):
@@ -116,7 +118,7 @@ def read_previous(path):
 def diff(prev, curr, baseline_reason="first_run"):
     if prev is None:
         return _baseline(baseline_reason or "first_run", curr)
-    if _owners(prev) != _owners(curr):
+    if _scope_key(prev) != _scope_key(curr):
         return _baseline("owner_set_changed", curr)
     prev_open, curr_open, curr_all = _open(prev), _open(curr), _all(curr)
     cov = {c["repo"]: c for c in curr.get("coverage", [])}

@@ -11,7 +11,7 @@ Contents: [What it is](#1-what-it-is-and-what-it-is-not) · [Quick start](#2-qui
 It has two modes, picked from your request:
 
 - **Repo mode.** You open a repository and ask for a plan. It reads that repo's open alerts, checks the manifests and lockfiles, and writes `SECURITY-REMEDIATION.md`. The plan groups the alerts into blocks, and each block states its priority, fix-risk, effort, and who must act. Then it carries out the blocks you approve, on a working branch, one commit per block, asking you before any change to application code.
-- **Portfolio mode.** You name one or more orgs or user accounts. It produces one consolidated report folder per day: an HTML report, a paste-able summary, and JSON data, with the change since the previous day.
+- **Portfolio mode.** You name one or more orgs or user accounts, or specific repositories. It produces one consolidated report folder per day: an HTML report, a paste-able summary, and JSON data, with the change since the previous day.
 
 What it is not:
 
@@ -62,6 +62,7 @@ Pick one channel. Installing through both gives you duplicates.
 | Plan and fix the current repo | *Use github-security-remediation to plan and fix this repo's security alerts* |
 | Today's report for an org | *Use github-security-remediation to generate today's security report for org acme-telco* |
 | Plan only, change nothing | *Use github-security-remediation to plan this repo's security alerts. Only the plan, no changes.* |
+| Daily HTML report for one repo | *Use github-security-remediation to generate today's HTML security report for this repo only* |
 | Several owners in one report | *Use github-security-remediation to generate today's security report for acme-telco and acme-mobile* |
 | Same thing, in Spanish | *Usa github-security-remediation para generar el reporte de seguridad de hoy para la org acme-telco* |
 
@@ -136,6 +137,7 @@ security-reports/                 # default output directory (configurable)
   acme-telco/                     # scope: the owners, lower-cased, sorted, joined with "+" (e.g. acme-mobile+acme-telco)
     2026-11-10/
     2026-11-11/                   # UTC date of the run
+  acme-telco__portal-web/         # scope of a single-repo report (--repo acme-telco/portal-web)
       report.html                 # self-contained report, printable to PDF from the browser
       summary.txt                 # 5–10 lines to paste into Teams, Slack or email
       snapshot.json               # normalized, secret-free alert data: the source of every number
@@ -215,9 +217,10 @@ Priority in brief: a severity base (critical 40, high 30, medium 20, low 10), or
 - Re-running on the same UTC day overwrites that day's folder. The latest run of the day is the day's report.
 - **The delta** compares with the most recent earlier day folder of the same scope. `delta` is today's open alerts minus the previous report's.
 - **Baseline.** The first report for a scope, a report whose owner set changed, or one whose previous `snapshot.json` cannot be read (for example, truncated by a crash), is a baseline. It says so and shows no delta, and the next day compares normally again.
+- **When fixes show up.** Alerts close only on the default branch: Dependabot when the default branch's manifest or lockfile has the fixed version, code scanning when an analysis of the default branch no longer finds the issue. Secret scanning alerts never close by themselves: someone rotates the credential and resolves the alert. Work still on a branch, or merged but not yet rescanned, leaves the alerts open, so ask for the report after the merge and the scan finish.
 - **Lost coverage is not progress.** If an alert disappears because its repo lost scanner coverage (a scanner was turned off, a permission changed), it is not counted as closed. The report shows it as "hidden by lost coverage" next to the delta.
 - **Large orgs and resume.** The per-repo path costs about 3 or more calls per repo (500 repos is roughly 1,500–2,000 calls, within GitHub's 5,000 per hour). The script paces itself and backs off on rate limits (60 s, doubling up to 15 min, up to 5 retries). If it still stops, ask again or re-run the same command: finished repos are taken from `.cache/` and never counted twice, and each owner keeps the fetch strategy (and "partial view" label) of the interrupted run. If the retry happens after UTC midnight, the agent passes `--date <day of the interrupted run>` to resume into the same folder.
-- **Without the agent** (for example from a scheduler): `python3 <skill-dir>/scripts/run_portfolio.py --owner acme-telco --lang en`, where `<skill-dir>` is the folder holding this skill's `SKILL.md`. The output is the same, minus the analyst notes.
+- **Without the agent** (for example from a scheduler): `python3 <skill-dir>/scripts/run_portfolio.py --owner acme-telco --lang en` (or `--repo acme-telco/portal-web` for one repo), where `<skill-dir>` is the folder holding this skill's `SKILL.md`. The output is the same, minus the analyst notes.
 
 ## 9. Limitations and FAQ
 

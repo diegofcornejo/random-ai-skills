@@ -168,7 +168,9 @@ def build_snapshot(raw, generated_at):
         "scope": {"mode": "repo" if len(coverage) == 1 else "portfolio",
                   "owners": sorted(o["owner"] for o in owners),
                   "strategy": {o["owner"]: o.get("strategy") for o in owners}, "host": raw.get("host"),
-                  "public_only": sorted(o["owner"] for o in owners if o.get("public_only"))},
+                  "public_only": sorted(o["owner"] for o in owners if o.get("public_only")),
+                  "repos": sorted(c["repo"] for c in coverage)
+                  if any(o.get("strategy") == "repo-filter" for o in owners) else []},
         "coverage": coverage,
         "alerts": alerts,
         "clusters": clusters,

@@ -1,18 +1,19 @@
 # Portfolio Mode
 
-One run produces **one combined, consolidated report** for every requested owner (orgs and/or user accounts), with the change since the previous report of the same scope. It is designed to run once a day and hand to the client's security team. It is read-only on GitHub.
+One run produces **one combined, consolidated report** for every requested owner (orgs and/or user accounts), or for an explicit list of repositories, with the change since the previous report of the same scope. It is designed to run once a day and hand to the client's security team. It is read-only on GitHub.
 
 Everything the user reads (questions, the narrative, the report via `--lang`, your summary) is in **the user's language**.
 
 ## 1. Preconditions
 
 1. **Owners**: confirm the exact list, e.g. `acme-telco` and `acme-mobile`. Each is an org or a user login; each becomes one `--owner`. Ask if the request is vague ("all our orgs"). Logins are case-insensitive: the scripts replace what was typed with GitHub's spelling of the login (`Acme-Telco` → `acme-telco`) everywhere in the report, and a change of case alone never starts a new baseline.
+   **Repo scope** (the user wants the report for one repo, "this repo", or a few named repos): each repo becomes one `--repo OWNER/NAME` instead of `--owner`. For "this repo", read it with `gh repo view --json nameWithOwner`. Only those repos are fetched; the report says "Selected repositories" instead of an owner-wide view. Changing the repo list starts a new baseline.
 2. **Host**: `github.com` by default. For GitHub Enterprise Cloud with data residency (`<name>.ghe.com`) or GitHub Enterprise Server, ask for the hostname and pass `--host`.
 3. **Auth**: `gh auth status --hostname <host>`. Not logged in → ask the user to run `gh auth login --hostname <host>`. Private repos' code and secret scanning need the `security_events` scope (classic tokens): `gh auth refresh -s security_events`, run by the user.
 4. **Output directory**: default `./security-reports`. The day folder is `<out>/<scope>/<YYYY-MM-DD>/`:
-   - `<scope>` is the owner list, lower-cased, sorted and joined with `+` (`acme-mobile+acme-telco`, or a username);
+   - `<scope>` is the owner list, lower-cased, sorted and joined with `+` (`acme-mobile+acme-telco`, or a username); with `--repo`, the repos as `owner__name`, joined the same way (`acme-telco__portal-web`);
    - the date is the **UTC date** of the run, not the local date. Near midnight it can differ from the user's calendar day; say so if it matters.
-5. **Archived repos** are excluded by default. Add `--include-archived` only if the user asks.
+5. **Archived repos** are excluded by default. Add `--include-archived` only if the user asks. A repo named with `--repo` is always included.
 6. **Report-file decision**: if the output directory is inside a git repo, run SKILL.md section 7 for that folder (with the public-repo warning: a committed report lists every repo's open vulnerabilities).
 7. **First run** for this scope (no earlier day folder under `<out>/<scope>/`): show the first-run notice (SKILL.md section 1).
 
@@ -25,6 +26,7 @@ The script picks the strategy per owner by itself. Tell the user which one to ex
 | Org | Org **owner** or **security manager** | **Org endpoints** (`/orgs/{org}/…/alerts`): a few paginated calls per source | Minutes | Strategy "org endpoints"; full view |
 | Org | Regular member (org endpoints answer 403/404) | **Per-repo fallback**: lists the repos the operator can access and calls the per-repo endpoints | About 3+ calls per repo: 500 repos ≈ 1,500–2,000 calls, within the 5,000/hour authenticated limit | **"Partial view: only repositories and alerts visible to `<user>`"**; repos whose alerts the user cannot read appear under coverage as `no_permission` |
 | User account (your own login) | You | Per-repo, always. Repos are listed with `GET /user/repos?affiliation=owner&visibility=all`, so your private repos are included | Same as above | Same partial-view label |
+| Named repos (`--repo`) | Anyone who can read the repos' alerts | **Repo filter**: per-repo endpoints for the named repos only; no owner listing | About 3 calls per repo | Strategy "selected repositories"; no partial-view label |
 | User account (someone else) | Anyone | Per-repo, always. GitHub lists only that account's **public** repos | Same as above | Same partial-view label, plus **"public repositories only"** |
 
 Coverage per repo and source is one of `ok`, `not_enabled`, `not_licensed`, `no_permission`, `unavailable`. **Only `ok` counts**; a repo with no `ok` source is "without coverage", never "zero alerts", and can never "reach zero". A repo is **at zero** (`totals.repos.zero_open`) or **reaches zero** (`diff.repos_reached_zero`) only when **all three** sources are `ok`. A repo with 0 open alerts but a scanner missing is listed separately as "0 open in covered scanners (partial coverage)" (`zero_open_partial`, `repos_reached_zero_partial`); never call it clean or at zero. When you explain `not_enabled` on a **private** repo, say that it can mean the paid product (GitHub Code Security or Secret Protection) is simply not turned on for that repo, and that the action is "enable it (requires license seats)". `not_licensed` means the organization has no license for it. On the org endpoints, a repo with no Dependabot alerts is probed with `GET /repos/{o}/{r}/vulnerability-alerts`; its 404 means `not_enabled` only when the operator is an org **owner** (checked once per org with `GET /user/memberships/orgs/{org}`). For anyone else, a security manager included, it is `unavailable`: unknown, not "disabled".
@@ -33,6 +35,10 @@ Coverage per repo and source is one of `ok`, `not_enabled`, `not_licensed`, `no_
 
 ```bash
 python3 <skill-dir>/scripts/run_portfolio.py --owner <owner1> [--owner <owner2> …] \
+  --host <host> --out <out-dir> --lang <code>
+
+# report for specific repositories only
+python3 <skill-dir>/scripts/run_portfolio.py --repo <owner>/<name> [--repo <owner>/<name> …] \
   --host <host> --out <out-dir> --lang <code>
 ```
 
