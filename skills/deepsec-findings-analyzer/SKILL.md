@@ -16,6 +16,10 @@ Use this skill when the user:
 - Mentions "deepsec findings", "security scan results", or similar
 - Asks for help with vulnerability triage or remediation planning
 
+## Script paths
+
+Every `scripts/…` path in this skill is relative to **this skill's directory** (the folder containing this `SKILL.md`), not to the user's project. Before running one, resolve it to an absolute path — e.g. `python3 <skill-dir>/scripts/state.py summary <findings.json>` — while keeping the user's project as the working directory. Running `python3 scripts/state.py` from the project root will fail with "No such file".
+
 ## Workflow
 
 Follow this workflow strictly. Do not skip steps.
