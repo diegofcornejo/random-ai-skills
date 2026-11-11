@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>GitHub security remediation report · acme-telco · 2026-11-11</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --surface: #f5f6f8;
+  --ink: #161d29;
+  --ink-2: #2f3846;
+  --muted: #586273;
+  --rule: #dde1e7;
+  --rule-strong: #b3bac6;
+  --accent: #1c4c8c;
+  --accent-soft: #e8eef8;
+  --warn-ink: #7a4a05;
+  --warn-bg: #fdf4e1;
+  --warn-rule: #e9c77d;
+
+  --sev-critical-bg: #fbe8e8; --sev-critical-fg: #8a1a1a; --sev-critical-bd: #e7b3b3;
+  --sev-high-bg: #fdefe2;     --sev-high-fg: #86400e;     --sev-high-bd: #edc6a2;
+  --sev-medium-bg: #fbf4d9;   --sev-medium-fg: #665006;   --sev-medium-bd: #e0cf8c;
+  --sev-low-bg: #e8eff9;      --sev-low-fg: #1c4c8c;      --sev-low-bd: #b6c9e5;
+  --sev-unknown-bg: #eef0f3;  --sev-unknown-fg: #485060;  --sev-unknown-bd: #cdd2da;
+
+  --band-p1: #8a1a1a; --band-p2: #9c4a0b; --band-p3: #4a5568; --band-fg: #ffffff;
+
+  --cov-ok-bg: #e6f2e9;            --cov-ok-fg: #1b5a30;            --cov-ok-bd: #b2d6bb;
+  --cov-not_enabled-bg: #fbf4d9;   --cov-not_enabled-fg: #665006;   --cov-not_enabled-bd: #e0cf8c;
+  --cov-not_licensed-bg: #fdefe2;  --cov-not_licensed-fg: #86400e;  --cov-not_licensed-bd: #edc6a2;
+  --cov-no_permission-bg: #f1ebf7; --cov-no_permission-fg: #57297f; --cov-no_permission-bd: #d3c2e5;
+  --cov-unavailable-bg: #eef0f3;   --cov-unavailable-fg: #485060;   --cov-unavailable-bd: #cdd2da;
+
+  --chart-total: #1c4c8c;
+  --chart-p1: #8a1a1a;
+  --chart-grid: #e6e9ee;
+  --bar-track: #eef0f3;
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    --bg: #11151b;
+    --surface: #181e26;
+    --ink: #e5e9ef;
+    --ink-2: #cdd3dc;
+    --muted: #9ea8b6;
+    --rule: #2a323d;
+    --rule-strong: #46505e;
+    --accent: #8fb5ec;
+    --accent-soft: #1b2738;
+    --warn-ink: #f1cd85;
+    --warn-bg: #2b2213;
+    --warn-rule: #6b5222;
+
+    --sev-critical-bg: #3a1717; --sev-critical-fg: #f4b7b7; --sev-critical-bd: #6a2b2b;
+    --sev-high-bg: #36230f;     --sev-high-fg: #f3c79d;     --sev-high-bd: #694421;
+    --sev-medium-bg: #312a0f;   --sev-medium-fg: #ead88e;   --sev-medium-bd: #5f5220;
+    --sev-low-bg: #17253a;      --sev-low-fg: #a9c6ef;      --sev-low-bd: #2f4769;
+    --sev-unknown-bg: #232a33;  --sev-unknown-fg: #c3cad4;  --sev-unknown-bd: #3b4451;
+
+    --band-p1: #b23434; --band-p2: #a6520c; --band-p3: #566173;
+
+    --cov-ok-bg: #15301f;            --cov-ok-fg: #a8dbb5;            --cov-ok-bd: #2a5a3a;
+    --cov-not_enabled-bg: #312a0f;   --cov-not_enabled-fg: #ead88e;   --cov-not_enabled-bd: #5f5220;
+    --cov-not_licensed-bg: #36230f;  --cov-not_licensed-fg: #f3c79d;  --cov-not_licensed-bd: #694421;
+    --cov-no_permission-bg: #2a1d3a; --cov-no_permission-fg: #d5bdf0; --cov-no_permission-bd: #4c3768;
+    --cov-unavailable-bg: #232a33;   --cov-unavailable-fg: #c3cad4;   --cov-unavailable-bd: #3b4451;
+
+    --chart-total: #8fb5ec;
+    --chart-p1: #f08a8a;
+    --chart-grid: #262e38;
+    --bar-track: #222a34;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.5 var(--font);
+  font-variant-numeric: tabular-nums;
+}
+.page { max-width: 1120px; margin: 0 auto; padding: 32px 32px 48px; counter-reset: section; }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.9em; overflow-wrap: anywhere; }
+h1, h2, h3, h4 { color: var(--ink); line-height: 1.25; margin: 0; }
+h1 { font-size: 26px; font-weight: 650; letter-spacing: -0.01em; }
+h2 { font-size: 19px; font-weight: 650; }
+h3 { font-size: 15px; font-weight: 650; margin: 26px 0 8px; }
+h3.small { font-size: 13px; margin: 0 0 6px; }
+h4 { font-size: 13.5px; font-weight: 650; margin: 18px 0 6px; color: var(--ink-2); }
+p { margin: 0 0 10px; }
+
+/* masthead */
+.masthead { border-bottom: 2px solid var(--ink); padding-bottom: 18px; margin-bottom: 8px; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 28px; margin: 14px 0 0; }
+.meta div { min-width: 0; }
+.meta dt { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.meta dd { margin: 0; font-weight: 500; }
+.masthead .table-wrap { margin-top: 14px; max-width: 860px; }
+.confidential { margin: 12px 0 0; font-size: 12px; color: var(--muted); }
+.notice { margin-top: 14px; padding: 10px 14px; border: 1px solid var(--warn-rule); background: var(--warn-bg); color: var(--warn-ink); }
+.flag { color: var(--warn-ink); font-weight: 600; }
+
+/* table of contents */
+.toc { margin: 18px 0 8px; font-size: 13px; }
+.toc ol { list-style: none; display: flex; flex-wrap: wrap; gap: 4px 18px; padding: 0; margin: 0; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc li::before { content: counter(toc) ". "; color: var(--muted); }
+
+/* sections */
+section { margin-top: 36px; counter-increment: section; }
+section > h2 { padding-bottom: 8px; border-bottom: 1px solid var(--rule-strong); margin-bottom: 14px; }
+section > h2::before { content: counter(section) "\2002"; color: var(--muted); font-weight: 500; }
+.lead { color: var(--ink-2); max-width: 78ch; }
+.note { color: var(--muted); font-size: 13px; max-width: 86ch; }
+.note.more { font-style: italic; margin-top: 6px; }
+.muted { color: var(--muted); }
+.zero { color: var(--muted); font-weight: 400; }
+span.warn { color: var(--warn-ink); }
+
+/* KPI tiles */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.kpi { border: 1px solid var(--rule); padding: 12px 14px; background: var(--bg); }
+.kpi-label { font-size: 12px; font-weight: 600; color: var(--muted); min-height: 2.5em; }
+.kpi-value { color: var(--ink); font-size: 28px; font-weight: 650; line-height: 1.15; margin: 4px 0 2px; }
+.kpi-value .of { font-size: 16px; font-weight: 500; color: var(--muted); }
+.kpi-sub { font-size: 12px; color: var(--muted); }
+.kpi.warn .kpi-sub, .kpi-sub .warn { color: var(--warn-ink); font-weight: 600; }
+
+.narrative { border: 1px solid var(--rule); background: var(--accent-soft); padding: 12px 16px; margin: 0 0 20px; }
+.narrative h3 { margin-top: 0; }
+.narrative p { max-width: 86ch; }
+.narrative .note { margin-bottom: 0; font-size: 12px; }
+
+.grid3 { display: grid; grid-template-columns: minmax(240px, 1.3fr) minmax(180px, 1fr) minmax(180px, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 760px) { .grid3 { grid-template-columns: 1fr; } }
+figure { margin: 0; }
+figcaption { font-size: 13px; font-weight: 650; margin-bottom: 6px; }
+
+/* tables */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 6px 10px 6px 0; text-align: left; vertical-align: top; border-bottom: 1px solid var(--rule); }
+th:last-child, td:last-child { padding-right: 0; }
+thead th { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--rule-strong); white-space: nowrap; }
+td.num, th.num { text-align: right; white-space: nowrap; }
+td.repo { overflow-wrap: break-word; min-width: 10em; }
+td.c-chip, td.c-alert, td.c-date, td.c-nowrap { white-space: nowrap; }
+td.c-nowrap code { overflow-wrap: normal; }
+td.detail { min-width: 220px; }
+table.compact td, table.compact th { padding-top: 4px; padding-bottom: 4px; }
+table.scope { max-width: 860px; }
+table.matrix th.num .chip { white-space: nowrap; }
+table.method { max-width: 720px; }
+table.method tr.group th { padding-top: 14px; font-size: 12px; font-weight: 650; text-transform: none; letter-spacing: 0; color: var(--ink-2); border-bottom: 1px solid var(--rule-strong); }
+.d-title { color: var(--ink); }
+.d-meta { color: var(--muted); font-size: 12px; margin-top: 2px; overflow-wrap: anywhere; }
+.comment { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* chips: text always carries the meaning; color only reinforces it */
+.chip { display: inline-block; padding: 0 7px; border: 1px solid transparent; border-radius: 3px; font-size: 11.5px; font-weight: 600; line-height: 18px; white-space: nowrap; vertical-align: 1px; }
+.band { min-width: 26px; text-align: center; color: var(--band-fg); font-family: var(--mono); font-size: 11px; }
+.band-p1 { background: var(--band-p1); border-color: var(--band-p1); }
+.band-p2 { background: var(--band-p2); border-color: var(--band-p2); }
+.band-p3 { background: var(--band-p3); border-color: var(--band-p3); }
+.band-none { background: var(--sev-unknown-bg); color: var(--sev-unknown-fg); border-color: var(--sev-unknown-bd); }
+.sev-critical { background: var(--sev-critical-bg); color: var(--sev-critical-fg); border-color: var(--sev-critical-bd); }
+.sev-high { background: var(--sev-high-bg); color: var(--sev-high-fg); border-color: var(--sev-high-bd); }
+.sev-medium { background: var(--sev-medium-bg); color: var(--sev-medium-fg); border-color: var(--sev-medium-bd); }
+.sev-low { background: var(--sev-low-bg); color: var(--sev-low-fg); border-color: var(--sev-low-bd); }
+.sev-unknown { background: var(--sev-unknown-bg); color: var(--sev-unknown-fg); border-color: var(--sev-unknown-bd); }
+.cov-ok { background: var(--cov-ok-bg); color: var(--cov-ok-fg); border-color: var(--cov-ok-bd); }
+.cov-not_enabled { background: var(--cov-not_enabled-bg); color: var(--cov-not_enabled-fg); border-color: var(--cov-not_enabled-bd); }
+.cov-not_licensed { background: var(--cov-not_licensed-bg); color: var(--cov-not_licensed-fg); border-color: var(--cov-not_licensed-bd); }
+.cov-no_permission { background: var(--cov-no_permission-bg); color: var(--cov-no_permission-fg); border-color: var(--cov-no_permission-bd); }
+.cov-unavailable { background: var(--cov-unavailable-bg); color: var(--cov-unavailable-fg); border-color: var(--cov-unavailable-bd); }
+.flag-chip { background: var(--warn-bg); color: var(--warn-ink); border-color: var(--warn-rule); }
+thead th .chip { text-transform: none; letter-spacing: 0; }
+
+/* charts */
+.chart { display: block; width: 100%; height: auto; font-family: var(--font); }
+.chart.trend { max-width: 860px; }
+.chart.bars { max-width: 380px; }
+.chart .grid { stroke: var(--chart-grid); stroke-width: 1; }
+.chart .axis { fill: var(--muted); font-size: 11px; }
+.chart .value { fill: var(--ink); font-size: 12px; font-weight: 650; }
+.line-total { fill: none; stroke: var(--chart-total); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.line-p1 { fill: none; stroke: var(--chart-p1); stroke-width: 2; stroke-dasharray: 6 4; stroke-linejoin: round; }
+.mark-total { fill: var(--bg); stroke: var(--chart-total); stroke-width: 2; }
+.mark-p1 { fill: var(--chart-p1); }
+.bar-track { fill: var(--bar-track); }
+.bar-p1 { fill: var(--band-p1); }
+.bar-p2 { fill: var(--band-p2); }
+.bar-p3 { fill: var(--band-p3); }
+.bar-label { fill: var(--ink); font-size: 12px; font-weight: 650; font-family: var(--mono); }
+.bar-value { fill: var(--ink); font-size: 12px; font-weight: 600; }
+.legend { display: flex; gap: 20px; font-size: 12px; font-weight: 500; color: var(--muted); margin-top: 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 24px; height: 10px; display: inline-block; }
+details.data { margin-top: 12px; font-size: 13px; }
+details.data summary { cursor: pointer; color: var(--accent); }
+details.data .table-wrap { max-width: 520px; margin-top: 8px; }
+
+/* coverage legend and definitions */
+.legend-list, .defs { margin: 0; display: grid; gap: 8px; max-width: 900px; }
+.legend-list div, .defs div { display: grid; grid-template-columns: 140px 1fr; gap: 12px; align-items: baseline; }
+.legend-list dd, .defs dd { margin: 0; color: var(--ink-2); }
+.defs dt { font-weight: 600; }
+@media (max-width: 640px) { .legend-list div, .defs div { grid-template-columns: 1fr; gap: 2px; } }
+.recorded { color: var(--muted); font-size: 12px; }
+ul.rules { margin: 0; padding-left: 20px; max-width: 86ch; }
+ul.rules li { margin-bottom: 4px; }
+
+/* waves */
+.wave { margin-top: 22px; }
+.wave-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; border-top: 1px solid var(--rule); padding-top: 12px; }
+.wave-head h3 { margin: 0; }
+.wave-stats { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.wave .note { margin-top: 4px; }
+
+footer { margin-top: 48px; padding-top: 12px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--muted); }
+
+@media (max-width: 640px) {
+  .page { padding: 20px 16px 36px; }
+  h1 { font-size: 22px; }
+}
+
+@page { margin: 14mm 12mm 16mm; }
+@media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-size: 9.5pt; background: #ffffff; color: #161d29; }
+  .page { max-width: none; padding: 0; }
+  .toc, details.data { display: none; }
+  a { color: inherit; text-decoration: none; }
+  section { margin-top: 18px; }
+  section.page-break { break-before: page; }
+  h2, h3, h4, .wave-head, figcaption { break-after: avoid; }
+  tr, .kpi, figure, .notice, .narrative, .legend-list div, .defs div, .grid3 > *, table.compact, table.matrix, ul.rules { break-inside: avoid; }
+  .wave { break-inside: avoid; }
+  thead { display: table-header-group; }
+  .kpis { grid-template-columns: repeat(3, 1fr); }
+  .grid3 { grid-template-columns: 1.3fr 1fr 1fr; }
+  .table-wrap { overflow: visible; }
+  footer { margin-top: 24px; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+<header class="masthead">
+  <h1>GitHub security remediation report</h1>
+  <dl class="meta"><div><dt>Generated</dt><dd>2026-11-11 09:00 UTC</dd></div><div><dt>Host</dt><dd><code>github.com</code></dd></div><div><dt>Scope</dt><dd>Portfolio</dd></div><div><dt>Owners</dt><dd>acme-telco</dd></div></dl>
+  <div class="table-wrap"><table class="scope"><thead><tr><th scope="col" class="">Owner</th><th scope="col" class="">Fetch strategy</th><th scope="col" class="">View</th></tr></thead><tbody><tr><td class="">acme-telco</td><td class="">Organization endpoints</td><td class="">All repositories of the organization</td></tr></tbody></table></div>
+  
+  <p class="confidential">Confidential: this report lists open vulnerabilities. Share it only with the people responsible for fixing them.</p>
+</header>
+
+<nav class="toc" aria-label="Report sections">
+  <ol>
+    <li><a href="#summary">Executive summary</a></li>
+    <li><a href="#trend">Trend</a></li>
+    <li><a href="#coverage">Coverage</a></li>
+    <li><a href="#top-risk">Top-risk repositories</a></li>
+    <li><a href="#campaigns">Fix once, close many</a></li>
+    <li><a href="#waves">Remediation waves</a></li>
+    <li><a href="#dismissals">Dismissals audit</a></li>
+    <li><a href="#methodology">Methodology</a></li>
+  </ol>
+</nav>
+
+<main>
+<section id="summary" aria-labelledby="h-summary">
+  <h2 id="h-summary">Executive summary</h2>
+  <div class="kpis"><div class="kpi "><div class="kpi-label">Open alerts</div><div class="kpi-value">6</div><div class="kpi-sub">−1 vs. previous report<br><span>hidden by lost coverage (not fixed): 0</span></div></div><div class="kpi "><div class="kpi-label">P1 open</div><div class="kpi-value">3</div><div class="kpi-sub">highest band, score of 70 or more</div></div><div class="kpi "><div class="kpi-label">Closed</div><div class="kpi-value">2</div><div class="kpi-sub">resolved: 1 · dismissed: 1</div></div><div class="kpi "><div class="kpi-label">New</div><div class="kpi-value">1</div><div class="kpi-sub">opened since the previous report</div></div><div class="kpi warn"><div class="kpi-label">Repositories with coverage</div><div class="kpi-value">3<span class="of"> / 5</span></div><div class="kpi-sub">without any readable scanner: 2</div></div><div class="kpi "><div class="kpi-label">Repositories at zero</div><div class="kpi-value">1</div><div class="kpi-sub">reached zero since the previous report: 1<br>0 open in covered scanners (partial coverage, not counted): 0</div></div></div><div class="narrative"><h3>Analyst notes</h3><p>The main risk is an exposed secret of type aws_access_key_id in acme-telco/billing-api (priority 85, validity active). Rotate it at the provider before anything else: removing it from the code does not invalidate it.</p><p>Since the 2026-11-10 report, open alerts went from 7 to 6: 2 closed (1 dismissed with a reason and comment) and 1 new (acme-telco/portal-web, axios). No alerts were hidden by lost coverage (0). acme-telco/shared-ui reached zero open alerts.</p><p>2 of 5 repositories (acme-telco/hr-intranet, acme-telco/legacy-crm) have no readable scanner: their alerts are unknown, not zero. Recommended next campaign: wave 1, 3 alerts in 2 repositories, starting with the secret rotation.</p><p class="note">Every number quoted in these notes comes from the snapshot and the diff of this report.</p></div><div class="grid3"><figure><figcaption>Open alerts by priority band</figcaption><svg class="chart bars" viewBox="0 0 360 94" role="img" aria-labelledby="bands-t bands-d"><title id="bands-t">Open alerts by priority band</title><desc id="bands-d">P1 3, P2 3, P3 0</desc><text class="bar-label" x="0" y="18">P1</text><rect class="bar-track" x="36" y="4" width="280" height="20" rx="2"/><rect class="bar bar-p1" x="36" y="4" width="280.0" height="20" rx="2"/><text class="bar-value" x="322.0" y="18">3</text><text class="bar-label" x="0" y="48">P2</text><rect class="bar-track" x="36" y="34" width="280" height="20" rx="2"/><rect class="bar bar-p2" x="36" y="34" width="280.0" height="20" rx="2"/><text class="bar-value" x="322.0" y="48">3</text><text class="bar-label" x="0" y="78">P3</text><rect class="bar-track" x="36" y="64" width="280" height="20" rx="2"/><text class="bar-value" x="42" y="78">0</text></svg></figure><div><h3 class="small">By source</h3><div class="table-wrap"><table class="compact"><thead><tr><th scope="col" class="">Source</th><th scope="col" class="num">Open</th></tr></thead><tbody><tr><td class="">Dependabot</td><td class="num">4</td></tr><tr><td class="">Code scanning</td><td class="num">1</td></tr><tr><td class="">Secret scanning</td><td class="num">1</td></tr></tbody></table></div></div><div><h3 class="small">By severity</h3><div class="table-wrap"><table class="compact"><thead><tr><th scope="col" class="">Severity</th><th scope="col" class="num">Open</th></tr></thead><tbody><tr><td class=""><span class="chip sev sev-critical">Critical</span></td><td class="num">2</td></tr><tr><td class=""><span class="chip sev sev-high">High</span></td><td class="num">3</td></tr><tr><td class=""><span class="chip sev sev-medium">Medium</span></td><td class="num">1</td></tr><tr><td class=""><span class="chip sev sev-low">Low</span></td><td class="num">0</td></tr></tbody></table></div></div></div><h3>By owner</h3><div class="table-wrap"><table class="compact"><thead><tr><th scope="col" class="">Owner</th><th scope="col" class="num">Repositories</th><th scope="col" class="num">With coverage</th><th scope="col" class="num">Open</th><th scope="col" class="num">P1</th></tr></thead><tbody><tr><td class="">acme-telco</td><td class="num">5</td><td class="num">3</td><td class="num">6</td><td class="num">3</td></tr></tbody></table></div><h3>Changes since the previous report</h3><h4>New since the previous report (1)</h4><div class="table-wrap"><table class="alerts"><thead><tr><th scope="col" class="c-chip">Band</th><th scope="col" class="num">Score</th><th scope="col" class="c-chip">Severity</th><th scope="col" class="repo">Repository</th><th scope="col" class="c-alert">Alert</th><th scope="col" class="detail">Detail</th></tr></thead><tbody><tr><td class="c-chip"><span class="chip band band-p2">P2</span></td><td class="num">45</td><td class="c-chip"><span class="chip sev sev-medium">Medium</span></td><td class="repo"><a href="https://github.com/acme-telco/portal-web">acme-telco/<wbr>portal-web</a></td><td class="c-alert"><a href="https://github.com/acme-telco/portal-web/security/dependabot/5">Dependabot #5</a></td><td class="detail"><div class="d-title">Axios CSRF token exposure</div><div class="d-meta"><code>axios &gt;= 0.8.1, &lt; 0.28.0</code> · fixed in 0.28.0 · <code>GHSA-wf5p-g6vw-rhxx</code> · <code>CVE-2023-45857</code> · EPSS percentile 30 · runtime · direct dependency</div></td></tr></tbody></table></div><h4>Closed since the previous report (2)</h4><div class="table-wrap"><table class=""><thead><tr><th scope="col" class="repo">Repository</th><th scope="col" class="c-alert">Alert</th><th scope="col" class="">Outcome</th></tr></thead><tbody><tr><td class="repo"><a href="https://github.com/acme-telco/portal-web">acme-telco/<wbr>portal-web</a></td><td class="c-alert"><a href="https://github.com/acme-telco/portal-web/security/dependabot/3">Dependabot #3</a></td><td class="">Dismissed (tolerable_risk) by jdoe</td></tr><tr><td class="repo"><a href="https://github.com/acme-telco/shared-ui">acme-telco/<wbr>shared-ui</a></td><td class="c-alert"><a href="https://github.com/acme-telco/shared-ui/security/dependabot/1">Dependabot #1</a></td><td class="">No longer open (fixed or resolved on GitHub)</td></tr></tbody></table></div><p class="note"><strong>Repositories that reached zero open alerts (all scanners readable):</strong> <a href="https://github.com/acme-telco/shared-ui">acme-telco/<wbr>shared-ui</a></p>
+</section>
+
+<section id="trend" aria-labelledby="h-trend">
+  <h2 id="h-trend">Trend</h2>
+  <figure class="trend-fig"><svg class="chart trend" viewBox="0 0 720 240" role="img" aria-labelledby="trend-t trend-d"><title id="trend-t">Open alerts per daily report</title><desc id="trend-d">From 2026-11-10 to 2026-11-11, open alerts went from 7 to 6.</desc><line class="grid" x1="44" x2="692" y1="206.0" y2="206.0"/><text class="axis" x="36" y="210.0" text-anchor="end">0</text><line class="grid" x1="44" x2="692" y1="158.0" y2="158.0"/><text class="axis" x="36" y="162.0" text-anchor="end">2</text><line class="grid" x1="44" x2="692" y1="110.0" y2="110.0"/><text class="axis" x="36" y="114.0" text-anchor="end">4</text><line class="grid" x1="44" x2="692" y1="62.0" y2="62.0"/><text class="axis" x="36" y="66.0" text-anchor="end">6</text><line class="grid" x1="44" x2="692" y1="14.0" y2="14.0"/><text class="axis" x="36" y="18.0" text-anchor="end">8</text><text class="axis" x="44.0" y="230" text-anchor="start">2026-11-10</text><text class="axis" x="692.0" y="230" text-anchor="end">2026-11-11</text><polyline class="line-p1" points="44.0,110.0 692.0,134.0"/><polyline class="line-total" points="44.0,38.0 692.0,62.0"/><rect class="mark-p1" x="41.0" y="107.0" width="6" height="6"/><rect class="mark-p1" x="689.0" y="131.0" width="6" height="6"/><circle class="mark-total" cx="44.0" cy="38.0" r="3.5"/><circle class="mark-total" cx="692.0" cy="62.0" r="3.5"/><text class="value" x="692.0" y="53.0" text-anchor="end">6</text></svg><figcaption class="legend"><span><svg class="swatch" viewBox="0 0 24 10" aria-hidden="true"><line class="line-total" x1="1" x2="23" y1="5" y2="5"/></svg>All open alerts</span><span><svg class="swatch" viewBox="0 0 24 10" aria-hidden="true"><line class="line-p1" x1="1" x2="23" y1="5" y2="5"/></svg>P1 open</span></figcaption></figure><details class="data"><summary>Show data table</summary><div class="table-wrap"><table class="compact"><thead><tr><th scope="col" class="">Date</th><th scope="col" class="num">Open</th><th scope="col" class="num">P1</th><th scope="col" class="num">P2</th><th scope="col" class="num">P3</th></tr></thead><tbody><tr><td class="">2026-11-11</td><td class="num">6</td><td class="num">3</td><td class="num">3</td><td class="num">0</td></tr><tr><td class="">2026-11-10</td><td class="num">7</td><td class="num">4</td><td class="num">2</td><td class="num">1</td></tr></tbody></table></div></details>
+</section>
+
+<section id="coverage" class="page-break" aria-labelledby="h-coverage">
+  <h2 id="h-coverage">Coverage</h2>
+  <p class="lead">Repositories with at least one scanner whose alerts could be read: 3 of 5. Repositories without coverage are not counted in any total: zero alerts there does not mean zero risk.</p><div class="table-wrap"><table class="matrix"><thead><tr><th scope="col" class="">Scanner</th><th scope="col" class="num"><span class="chip cov cov-ok">OK</span></th><th scope="col" class="num"><span class="chip cov cov-not_enabled">Not enabled</span></th><th scope="col" class="num"><span class="chip cov cov-not_licensed">Not licensed</span></th><th scope="col" class="num"><span class="chip cov cov-no_permission">No permission</span></th><th scope="col" class="num"><span class="chip cov cov-unavailable">Unavailable</span></th></tr></thead><tbody><tr><td class="">Dependabot</td><td class="num">3</td><td class="num">2</td><td class="num"><span class="zero">0</span></td><td class="num"><span class="zero">0</span></td><td class="num"><span class="zero">0</span></td></tr><tr><td class="">Code scanning</td><td class="num">2</td><td class="num">3</td><td class="num"><span class="zero">0</span></td><td class="num"><span class="zero">0</span></td><td class="num"><span class="zero">0</span></td></tr><tr><td class="">Secret scanning</td><td class="num">3</td><td class="num">2</td><td class="num"><span class="zero">0</span></td><td class="num"><span class="zero">0</span></td><td class="num"><span class="zero">0</span></td></tr></tbody></table></div><h3>Repositories with coverage gaps (3)</h3><div class="table-wrap"><table class=""><thead><tr><th scope="col" class="repo">Repository</th><th scope="col" class="">Visibility</th><th scope="col" class="c-chip">Dependabot</th><th scope="col" class="c-chip">Code scanning</th><th scope="col" class="c-chip">Secret scanning</th></tr></thead><tbody><tr><td class="repo"><a href="https://github.com/acme-telco/hr-intranet">acme-telco/<wbr>hr-intranet</a> <span class="chip flag-chip">No coverage</span></td><td class="">private</td><td class="c-chip"><span class="chip cov cov-not_enabled">Not enabled</span></td><td class="c-chip"><span class="chip cov cov-not_enabled">Not enabled</span></td><td class="c-chip"><span class="chip cov cov-not_enabled">Not enabled</span></td></tr><tr><td class="repo"><a href="https://github.com/acme-telco/legacy-crm">acme-telco/<wbr>legacy-crm</a> <span class="chip flag-chip">No coverage</span></td><td class="">private</td><td class="c-chip"><span class="chip cov cov-not_enabled">Not enabled</span></td><td class="c-chip"><span class="chip cov cov-not_enabled">Not enabled</span></td><td class="c-chip"><span class="chip cov cov-not_enabled">Not enabled</span></td></tr><tr><td class="repo"><a href="https://github.com/acme-telco/billing-api">acme-telco/<wbr>billing-api</a></td><td class="">private</td><td class="c-chip"><span class="chip cov cov-ok">OK</span></td><td class="c-chip"><span class="chip cov cov-not_enabled">Not enabled</span></td><td class="c-chip"><span class="chip cov cov-ok">OK</span></td></tr></tbody></table></div><p class="note">Repositories with all three scanners readable: 2.</p><h3>Alerts hidden by lost coverage</h3><p class="note">No alerts left the view because of lost coverage.</p><h3>What each coverage status means</h3><dl class="legend-list"><div><dt><span class="chip cov cov-ok">OK</span></dt><dd>The scanner is enabled and its alerts were read. Zero alerts here means zero open alerts.</dd></div><div><dt><span class="chip cov cov-not_enabled">Not enabled</span></dt><dd>The scanner is turned off for this repository. On a private repository this can also mean that the paid GitHub security product (Code Security or Secret Protection) is not turned on for it. Action: enable it (this requires available license seats). No alerts are counted for it.</dd></div><div><dt><span class="chip cov cov-not_licensed">Not licensed</span></dt><dd>GitHub reports that the organization has no license for this feature. Action: obtain licenses (GitHub Code Security or Secret Protection) before it can be enabled. No alerts are counted for it.</dd></div><div><dt><span class="chip cov cov-no_permission">No permission</span></dt><dd>The account that ran the report cannot read these alerts. It needs security-alert read access to the repository, or an owner or security manager role. Open alerts may exist that this report does not show.</dd></div><div><dt><span class="chip cov cov-unavailable">Unavailable</span></dt><dd>The status could not be determined: the endpoint did not answer (an older GitHub Enterprise Server, a temporary error), or, on the organization endpoints, the account is not an org owner and GitHub answered 404 to the Dependabot status check (security managers can get that). The status is unknown and no alerts are counted for it.</dd></div></dl>
+</section>
+
+<section id="top-risk" class="page-break" aria-labelledby="h-top-risk">
+  <h2 id="h-top-risk">Top-risk repositories</h2>
+  <p class="lead">Repositories with open alerts, ranked by their highest alert priority, then P1 count, then open alerts (showing 2 of 2). Only repositories with readable coverage are ranked.</p><div class="table-wrap"><table class=""><thead><tr><th scope="col" class="num">#</th><th scope="col" class="repo">Repository</th><th scope="col" class="num">Max priority</th><th scope="col" class="num">P1</th><th scope="col" class="num">Open</th><th scope="col" class="num">Dependabot</th><th scope="col" class="num">Code scanning</th><th scope="col" class="num">Secret scanning</th></tr></thead><tbody><tr><td class="num">1</td><td class="repo"><a href="https://github.com/acme-telco/billing-api">acme-telco/<wbr>billing-api</a></td><td class="num"><span class="chip band band-p1">P1</span> 85</td><td class="num">1</td><td class="num">2</td><td class="num">1</td><td class="num"><span class="zero">0</span></td><td class="num">1</td></tr><tr><td class="num">2</td><td class="repo"><a href="https://github.com/acme-telco/portal-web">acme-telco/<wbr>portal-web</a></td><td class="num"><span class="chip band band-p1">P1</span> 75</td><td class="num">2</td><td class="num">4</td><td class="num">3</td><td class="num">1</td><td class="num"><span class="zero">0</span></td></tr></tbody></table></div>
+</section>
+
+<section id="campaigns" aria-labelledby="h-campaigns">
+  <h2 id="h-campaigns">Fix once, close many</h2>
+  <p class="lead">Each row is one fix (a package upgrade) that closes open Dependabot alerts in several repositories at once. Larger campaigns close more alerts per change.</p><p class="note">No single fix currently closes alerts in two or more repositories.</p><p class="note"><strong>No longer spanning several repositories, alerts still open:</strong> <code>npm:lodash:GHSA-35jh-r3h4-6jhm</code> (2 → 1)</p>
+</section>
+
+<section id="waves" class="page-break" aria-labelledby="h-waves">
+  <h2 id="h-waves">Remediation waves</h2>
+  <p class="lead">Open alerts split into three waves so the team works on the most urgent items first. Within a wave, alerts are ordered by priority score.</p><div class="wave wave-1"><div class="wave-head"><h3>Wave 1: now</h3><span class="wave-stats">3 alerts in 2 repositories</span></div><p class="note">Every open exposed secret and every P1 alert. Rotate secrets first: closing the alert does not revoke the credential.</p><div class="table-wrap"><table class="alerts"><thead><tr><th scope="col" class="c-chip">Band</th><th scope="col" class="num">Score</th><th scope="col" class="c-chip">Severity</th><th scope="col" class="repo">Repository</th><th scope="col" class="c-alert">Alert</th><th scope="col" class="detail">Detail</th></tr></thead><tbody><tr><td class="c-chip"><span class="chip band band-p1">P1</span></td><td class="num">85</td><td class="c-chip"><span class="chip sev sev-critical">Critical</span></td><td class="repo"><a href="https://github.com/acme-telco/billing-api">acme-telco/<wbr>billing-api</a></td><td class="c-alert"><a href="https://github.com/acme-telco/billing-api/security/secret-scanning/1">Secret scanning #1</a></td><td class="detail"><div class="d-title">Amazon AWS Access Key ID</div><div class="d-meta">still valid</div></td></tr><tr><td class="c-chip"><span class="chip band band-p1">P1</span></td><td class="num">75</td><td class="c-chip"><span class="chip sev sev-high">High</span></td><td class="repo"><a href="https://github.com/acme-telco/portal-web">acme-telco/<wbr>portal-web</a></td><td class="c-alert"><a href="https://github.com/acme-telco/portal-web/security/dependabot/2">Dependabot #2</a></td><td class="detail"><div class="d-title">Command Injection in lodash</div><div class="d-meta"><code>lodash &lt; 4.17.21</code> · fixed in 4.17.21 · <code>GHSA-35jh-r3h4-6jhm</code> · <code>CVE-2021-23337</code> · EPSS percentile 97 · runtime · transitive dependency</div></td></tr><tr><td class="c-chip"><span class="chip band band-p1">P1</span></td><td class="num">70</td><td class="c-chip"><span class="chip sev sev-critical">Critical</span></td><td class="repo"><a href="https://github.com/acme-telco/portal-web">acme-telco/<wbr>portal-web</a></td><td class="c-alert"><a href="https://github.com/acme-telco/portal-web/security/dependabot/1">Dependabot #1</a></td><td class="detail"><div class="d-title">Cross-site scripting in Angular</div><div class="d-meta"><code>@angular/core &lt; 11.0.5</code> · fixed in 11.0.5 · <code>GHSA-c75v-2vq8-873c</code> · <code>CVE-2021-4231</code> · EPSS percentile 61 · runtime · direct dependency</div></td></tr></tbody></table></div></div><div class="wave wave-2"><div class="wave-head"><h3>Wave 2: next</h3><span class="wave-stats">3 alerts in 2 repositories</span></div><p class="note">P2 alerts, plus alerts covered by a campaign that spans five or more repositories.</p><div class="table-wrap"><table class="alerts"><thead><tr><th scope="col" class="c-chip">Band</th><th scope="col" class="num">Score</th><th scope="col" class="c-chip">Severity</th><th scope="col" class="repo">Repository</th><th scope="col" class="c-alert">Alert</th><th scope="col" class="detail">Detail</th></tr></thead><tbody><tr><td class="c-chip"><span class="chip band band-p2">P2</span></td><td class="num">50</td><td class="c-chip"><span class="chip sev sev-high">High</span></td><td class="repo"><a href="https://github.com/acme-telco/billing-api">acme-telco/<wbr>billing-api</a></td><td class="c-alert"><a href="https://github.com/acme-telco/billing-api/security/dependabot/1">Dependabot #1</a></td><td class="detail"><div class="d-title">Cookie leak in guzzlehttp/guzzle</div><div class="d-meta"><code>guzzlehttp/guzzle &lt; 6.5.8</code> · fixed in 6.5.8 · <code>GHSA-25mq-v84q-4j7r</code> · <code>CVE-2022-29248</code> · EPSS percentile 55 · runtime · direct dependency</div></td></tr><tr><td class="c-chip"><span class="chip band band-p2">P2</span></td><td class="num">45</td><td class="c-chip"><span class="chip sev sev-medium">Medium</span></td><td class="repo"><a href="https://github.com/acme-telco/portal-web">acme-telco/<wbr>portal-web</a></td><td class="c-alert"><a href="https://github.com/acme-telco/portal-web/security/dependabot/5">Dependabot #5</a></td><td class="detail"><div class="d-title">Axios CSRF token exposure</div><div class="d-meta"><code>axios &gt;= 0.8.1, &lt; 0.28.0</code> · fixed in 0.28.0 · <code>GHSA-wf5p-g6vw-rhxx</code> · <code>CVE-2023-45857</code> · EPSS percentile 30 · runtime · direct dependency</div></td></tr><tr><td class="c-chip"><span class="chip band band-p2">P2</span></td><td class="num">40</td><td class="c-chip"><span class="chip sev sev-high">High</span></td><td class="repo"><a href="https://github.com/acme-telco/portal-web">acme-telco/<wbr>portal-web</a></td><td class="c-alert"><a href="https://github.com/acme-telco/portal-web/security/code-scanning/1">Code scanning #1</a></td><td class="detail"><div class="d-title">Client-side cross-site scripting</div><div class="d-meta"><code>js/xss</code> · CodeQL · <code>src/app/render.ts:42</code></div></td></tr></tbody></table></div></div><div class="wave wave-3"><div class="wave-head"><h3>Wave 3: planned</h3><span class="wave-stats">0 alerts in 0 repositories</span></div><p class="note">Everything else, to schedule with regular maintenance.</p><p class="note">No open alerts in this wave.</p></div>
+</section>
+
+<section id="dismissals" class="page-break" aria-labelledby="h-dismissals">
+  <h2 id="h-dismissals">Dismissals audit</h2>
+  <h3>Dismissed since the previous report</h3><div class="table-wrap"><table class="dismissals"><thead><tr><th scope="col" class="c-date">Dismissed</th><th scope="col" class="repo">Repository</th><th scope="col" class="c-alert">Alert</th><th scope="col" class="c-nowrap">By</th><th scope="col" class="c-nowrap">Reason</th><th scope="col" class="detail">Comment</th></tr></thead><tbody><tr><td class="c-date">2026-11-10 15:00 UTC</td><td class="repo"><a href="https://github.com/acme-telco/portal-web">acme-telco/<wbr>portal-web</a></td><td class="c-alert"><a href="https://github.com/acme-telco/portal-web/security/dependabot/3">Dependabot #3</a></td><td class="c-nowrap">jdoe</td><td class="c-nowrap"><code>tolerable_risk</code></td><td class="detail"><span class="comment">Dev-only dependency, not shipped to production.</span></td></tr></tbody></table></div><h3>All dismissed alerts on record (2)</h3><div class="table-wrap"><table class="dismissals"><thead><tr><th scope="col" class="c-date">Dismissed</th><th scope="col" class="repo">Repository</th><th scope="col" class="c-alert">Alert</th><th scope="col" class="c-nowrap">By</th><th scope="col" class="c-nowrap">Reason</th><th scope="col" class="detail">Comment</th></tr></thead><tbody><tr><td class="c-date">2026-11-10 15:00 UTC</td><td class="repo"><a href="https://github.com/acme-telco/portal-web">acme-telco/<wbr>portal-web</a></td><td class="c-alert"><a href="https://github.com/acme-telco/portal-web/security/dependabot/3">Dependabot #3</a></td><td class="c-nowrap">jdoe</td><td class="c-nowrap"><code>tolerable_risk</code></td><td class="detail"><span class="comment">Dev-only dependency, not shipped to production.</span></td></tr><tr><td class="c-date">2026-10-15 08:00 UTC</td><td class="repo"><a href="https://github.com/acme-telco/portal-web">acme-telco/<wbr>portal-web</a></td><td class="c-alert"><a href="https://github.com/acme-telco/portal-web/security/dependabot/4">Dependabot #4</a></td><td class="c-nowrap">mallory</td><td class="c-nowrap"><code>not_used</code></td><td class="detail"><span class="comment">Not used in prod &lt;script&gt;alert(1)&lt;/script&gt; &quot;quoted&quot; &amp; &#x27;single&#x27;</span></td></tr></tbody></table></div>
+</section>
+
+<section id="methodology" class="page-break" aria-labelledby="h-methodology">
+  <h2 id="h-methodology">Methodology</h2>
+  <p class="lead">All weights below are read from the snapshot this report was built from (2026-11-11 09:00 UTC), so the report shows exactly what was applied. They stay stable across runs.</p><h3>Priority score</h3><p class="note">Each open alert gets a score from the signals below. The sum is clamped to the range 0 to 100.</p><div class="table-wrap"><table class="method"><thead><tr><th scope="col">Signal</th><th scope="col" class="num">Points</th></tr></thead><tbody><tr class="group"><th colspan="2" scope="rowgroup">Base points by severity (Dependabot and code scanning)</th></tr><tr><td>Critical</td><td class="num">40</td></tr><tr><td>High</td><td class="num">30</td></tr><tr><td>Medium</td><td class="num">20</td></tr><tr><td>Low</td><td class="num">10</td></tr><tr><td>Unknown</td><td class="num">15</td></tr><tr class="group"><th colspan="2" scope="rowgroup">Dependabot (added to the severity base)</th></tr><tr><td>EPSS percentile of 95 or more (highest matching tier only)</td><td class="num">+25</td></tr><tr><td>EPSS percentile of 80 or more (highest matching tier only)</td><td class="num">+15</td></tr><tr><td>EPSS percentile of 50 or more (highest matching tier only)</td><td class="num">+5</td></tr><tr><td>Dependency scope: development</td><td class="num">−10</td></tr><tr><td>Dependency scope: runtime</td><td class="num">+10</td></tr><tr><td>Dependency relationship: direct dependency</td><td class="num">+5</td></tr><tr class="group"><th colspan="2" scope="rowgroup">Code scanning</th></tr><tr><td>Alert classified as test, generated code</td><td class="num">−15</td></tr><tr class="group"><th colspan="2" scope="rowgroup">Repository activity (all sources)</th></tr><tr><td>Repository pushed within the last 180 days</td><td class="num">+5</td></tr><tr><td>Repository pushed within the last 30 days</td><td class="num">+10</td></tr></tbody></table></div><h3>Priority bands</h3><div class="table-wrap"><table class="compact"><thead><tr><th scope="col" class="c-chip">Band</th><th scope="col" class="">Rule</th></tr></thead><tbody><tr><td class="c-chip"><span class="chip band band-p1">P1</span></td><td class="">score of 70 or more</td></tr><tr><td class="c-chip"><span class="chip band band-p2">P2</span></td><td class="">score of 40 or more</td></tr><tr><td class="c-chip"><span class="chip band band-p3">P3</span></td><td class="">score of 0 or more</td></tr></tbody></table></div><h3>Grouping and ordering</h3><h4>Campaigns</h4><p>open Dependabot alerts grouped by ecosystem:package:advisory (and angular:&lt;major&gt;), kept when they span &gt;= 2 repos</p><h4>Top-risk ranking</h4><p>per repo with coverage, sorted by (-max_priority, -p1_count, -open, repo)</p><h4>Waves</h4><dl class="defs"><div><dt>Wave 1: now</dt><dd>all open secrets plus every P1</dd></div><div><dt>Wave 2: next</dt><dd>alerts in clusters with &gt;= 5 repos, plus P2</dd></div><div><dt>Wave 3: planned</dt><dd>the rest</dd></div></dl><h3>Counting rules</h3><ul class="rules"><li>Only scanners with coverage OK are counted. A repository is at zero, or reaches zero, only when all three scanners are readable; 0 open alerts with a scanner missing is listed as partial coverage. A repository without coverage is never reported as zero alerts.</li><li>Day delta = open alerts now minus open alerts in the previous report of the same scope.</li><li>An alert that disappears because its scanner coverage was lost is listed under lost coverage, not as closed.</li><li>When there is no previous report, the set of owners changed, or the previous snapshot cannot be read, the report is a baseline and shows no day-over-day changes.</li><li>Secret values are never fetched or stored (hide_secret=true). Only the secret type and its validity are shown.</li><li>Every number comes from snapshot.json and diff.json. Rendering the same inputs again produces the same report.</li></ul>
+</section>
+</main>
+
+<footer>Generated by github-security-remediation from snapshot.json (2026-11-11 09:00 UTC). Self-contained: no scripts and no external resources. Links point to github.com. Secret values are never fetched or shown.</footer>
+</div>
+</body>
+</html>

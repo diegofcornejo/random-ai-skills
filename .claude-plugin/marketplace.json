@@ -27,6 +27,15 @@
       "skills": ["./skills/deepsec-findings-analyzer"]
     },
     {
+      "name": "github-security-remediation",
+      "source": "./",
+      "description": "Read a repo's GitHub security alerts (Dependabot, code scanning, secret scanning), plan and execute prioritized remediation with approvals, and build portfolio reports across owners. A read-only subagent runs the repo analysis in its own context.",
+      "category": "security",
+      "keywords": ["security", "dependabot", "code-scanning", "secret-scanning", "remediation"],
+      "skills": ["./skills/github-security-remediation"],
+      "agents": ["./agents/security-alerts-analyzer.md"]
+    },
+    {
       "name": "random-git",
       "source": "./",
       "description": "User-invoked git workflows: /random-commit (semantic commits + push) and /random-merge-to-main (merge, push, delete branch).",

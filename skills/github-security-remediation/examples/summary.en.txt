@@ -1,0 +1,9 @@
+GitHub security report: acme-telco (2026-11-11)
+Open alerts: 6 (-1 vs. previous report; hidden by lost coverage, not fixed: 0)
+Since the previous report: 2 closed (1 dismissed), 1 new
+By priority: P1 3, P2 3, P3 0
+Coverage: 3 of 5 repositories scanned; 2 without any readable scanner (not counted as zero)
+Top risk: acme-telco/billing-api (priority 85); acme-telco/portal-web (priority 75)
+Wave 1 (do now): 3 alerts in 2 repositories
+Reached zero open alerts: acme-telco/shared-ui
+Full report with details per repository, waves and methodology: report.html

@@ -5,6 +5,7 @@
 #  - every path in marketplace.json exists
 #  - every skill referenced by an agent ("references/…" of skills/<name>) exists
 #  - no obvious secrets are committed
+#  - local unit tests pass (when a tests/ folder exists)
 #  - `claude plugin validate .` passes (when the claude CLI is installed)
 set -euo pipefail
 
@@ -65,7 +66,18 @@ else
   ok "no obvious secrets"
 fi
 
-# 6. Claude plugin validation
+# 6. Unit tests (local only; tests/ is not distributed)
+shopt -s nullglob
+for t in tests/*/; do
+  if PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s "$t" >/dev/null 2>&1; then
+    ok "unit tests ($t)"
+  else
+    err "unit tests failed in $t (run: python3 -m unittest discover -s $t)"
+  fi
+done
+shopt -u nullglob
+
+# 7. Claude plugin validation
 if command -v claude >/dev/null 2>&1; then
   if claude plugin validate . >/dev/null 2>&1; then ok "claude plugin validate"; else err "claude plugin validate failed (run it for details)"; fi
 else

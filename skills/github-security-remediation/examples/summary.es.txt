@@ -1,0 +1,9 @@
+Informe de seguridad de GitHub: acme-telco (2026-11-11)
+Alertas abiertas: 6 (-1 vs. informe anterior; ocultas por pérdida de cobertura, no corregidas: 0)
+Desde el informe anterior: cerradas 2 (descartadas 1), nuevas 1
+Por prioridad: P1 3, P2 3, P3 0
+Cobertura: 3 de 5 repositorios con escáner legible; 2 sin ninguno (no se cuentan como cero)
+Mayor riesgo: acme-telco/billing-api (prioridad 85); acme-telco/portal-web (prioridad 75)
+Oleada 1 (hacer ya): 3 alertas en 2 repositorios
+Llegaron a cero alertas abiertas: acme-telco/shared-ui
+Informe completo con detalle por repositorio, oleadas y metodología: report.html

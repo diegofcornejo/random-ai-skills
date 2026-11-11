@@ -35,9 +35,9 @@ scripts/
 
 - **Skill directory**: `kebab-case` (e.g. `deepsec-findings-analyzer`)
 - **`SKILL.md`**: exact filename, uppercase
-- **Scripts**: `kebab-case.{sh,py,ts}`
+- **Scripts**: `kebab-case.{sh,py,ts}`. Exception: a Python module that other scripts `import` uses `snake_case` (e.g. `gh_client.py`), because `import` cannot take hyphens.
 - Directory name MUST match the `name:` field in `SKILL.md`. `npx skills add --skill <name>` matches against it.
-- A companion subagent uses the **same name** as its skill (`agents/dead-code-hunter.md` ↔ `skills/dead-code-hunter/`).
+- A companion subagent is named after its **role**. It uses the **same name** as its skill when the role is the same (`agents/dead-code-hunter.md` ↔ `skills/dead-code-hunter/`), and a role name otherwise (`agents/security-alerts-analyzer.md` for `skills/github-security-remediation/`). The skill's delegation step and the plugin's `agents` entry name it explicitly.
 
 ## SKILL.md Format
 
@@ -128,8 +128,8 @@ OpenCode agent frontmatter uses **V2**: `mode: subagent` and an ordered `permiss
 
 1. Move the heavy protocol into `skills/{name}/references/<protocol>.md` and end it with an output contract.
 2. Add a delegation step to `SKILL.md`, with an inline fallback.
-3. Create `agents/{name}.md` (Claude Code) and/or `opencode/agents/{name}.md` (OpenCode V2), following the rules above.
-4. Add `"agents": ["./agents/{name}.md"]` to the plugin entry in `marketplace.json`.
+3. Create `agents/{role-name}.md` (Claude Code) and/or `opencode/agents/{name}.md` (OpenCode V2), following the rules above.
+4. Add `"agents": ["./agents/{role-name}.md"]` to the plugin entry in `marketplace.json`.
 5. Run `scripts/validate.sh`. It checks that every `…/references/*.md` an agent mentions exists.
 
 ## Versioning

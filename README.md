@@ -33,6 +33,7 @@ Pick **one** channel per agent — installing the same skill through two channel
 /plugin marketplace add diegofcornejo/random-ai-skills
 /plugin install dead-code-hunter@random-ai-skills
 /plugin install deepsec-findings-analyzer@random-ai-skills
+/plugin install github-security-remediation@random-ai-skills
 /plugin install random-git@random-ai-skills
 ```
 
@@ -85,6 +86,10 @@ Detect and safely remove dead code in JS/TS projects (Node, React, monorepos): o
 ### [deepsec-findings-analyzer](skills/deepsec-findings-analyzer)
 
 Triage security findings from a [deepsec](https://github.com/vercel-labs/deepsec) scan: group by root cause, prioritize by impact and effort, keep triage state across sessions, and generate ticket-ready drafts.
+
+### [github-security-remediation](skills/github-security-remediation) · subagent: [`security-alerts-analyzer`](agents/security-alerts-analyzer.md)
+
+Turn a repo's GitHub security alerts (Dependabot, code scanning, secret scanning) into a prioritized remediation plan and carry it out with approvals, or build a daily consolidated report across orgs and user accounts for a security team. Read-only on GitHub except dismissals you confirm; it never merges, pushes or rotates secrets on its own. [What you get, with examples →](skills/github-security-remediation/README.md)
 
 ### [random-commit](skills/random-commit) · [random-merge-to-main](skills/random-merge-to-main)
 
