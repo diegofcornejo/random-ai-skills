@@ -1,0 +1,38 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "diegofcornejo",
+  "owner": {
+    "name": "Diego Cornejo",
+    "url": "https://github.com/diegofcornejo"
+  },
+  "metadata": {
+    "description": "Agent Skills + subagents by @diegofcornejo. Each plugin bundles a skill with its companion subagent so they install (and update) together."
+  },
+  "plugins": [
+    {
+      "name": "dead-code-hunter",
+      "source": "./",
+      "description": "Find and safely remove dead code in JS/TS projects. Skill orchestrates plan/approval/execution; a read-only subagent runs detection in its own context.",
+      "category": "development",
+      "keywords": ["dead-code", "knip", "ts-prune", "depcheck", "cleanup"],
+      "skills": ["./skills/dead-code-hunter"],
+      "agents": ["./agents/dead-code-hunter.md"]
+    },
+    {
+      "name": "deepsec-findings-analyzer",
+      "source": "./",
+      "description": "Triage deepsec security scan findings: group by root cause, prioritize, and draft tickets.",
+      "category": "security",
+      "keywords": ["security", "deepsec", "triage"],
+      "skills": ["./skills/deepsec-findings-analyzer"]
+    },
+    {
+      "name": "random-git",
+      "source": "./",
+      "description": "User-invoked git workflows: /random-commit (semantic commits + push) and /random-merge-to-main (merge, push, delete branch).",
+      "category": "development",
+      "keywords": ["git", "commit", "merge"],
+      "skills": ["./skills/random-commit", "./skills/random-merge-to-main"]
+    }
+  ]
+}
