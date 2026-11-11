@@ -23,7 +23,7 @@ Personal collection of [Agent Skills](https://agentskills.io/) plus companion su
 Install from a local clone (no GitHub round-trip):
 
 ```bash
-npx skills add file:///Users/diego/personal/skills --skill {skill-name} -y
+npx skills add file:///Users/diego/personal/random-ai-skills --skill {skill-name} -y
 ```
 
 Install from GitHub (after pushing):
@@ -32,12 +32,14 @@ Install from GitHub (after pushing):
 npx skills add https://github.com/diegofcornejo/random-ai-skills --skill {skill-name} -y
 ```
 
-Load the whole repo as a session-only Claude Code plugin (skills + subagents, namespaced `skills:`):
+Load the whole repo as a session-only Claude Code plugin (skills + subagents, namespaced after the folder name, e.g. `random-ai-skills:`):
 
 ```bash
-claude --plugin-dir /Users/diego/personal/skills
-claude plugin validate /Users/diego/personal/skills
+claude --plugin-dir /Users/diego/personal/random-ai-skills
+claude plugin validate /Users/diego/personal/random-ai-skills
 ```
+
+If you move or rename the clone, re-run `scripts/install-agents.sh` — it replaces the now-broken symlinks.
 
 List skills the CLI sees in the repo:
 

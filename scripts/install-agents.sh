@@ -47,7 +47,11 @@ install_file() {
   if [[ -L "$dest" && "$(readlink "$dest")" == "$src" ]]; then
     echo "  = $dest (already linked)" >&2; return
   fi
-  if [[ -e "$dest" || -L "$dest" ]]; then
+  # Broken symlink (e.g. the clone was moved or renamed): safe to replace, no backup.
+  if [[ -L "$dest" && ! -e "$dest" ]]; then
+    echo "  ~ replacing broken link $dest -> $(readlink "$dest")" >&2
+    run rm "$dest"
+  elif [[ -e "$dest" || -L "$dest" ]]; then
     if [[ $force -eq 0 ]]; then
       echo "  ! $dest exists — skipped (use --force to back it up and replace)" >&2
       skipped=$((skipped + 1)); return
