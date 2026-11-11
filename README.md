@@ -1,4 +1,4 @@
-# skills
+# random-ai-skills
 
 A collection of [Agent Skills](https://agentskills.io/) — plus the **subagents** and commands that pair with them — by [@diegofcornejo](https://github.com/diegofcornejo) for Claude Code, OpenCode, Cursor, Codex, Copilot, and any agent that supports the skills format.
 
@@ -30,13 +30,13 @@ Pick **one** channel per agent — installing the same skill through two channel
 ### Claude Code — plugin (recommended: skill + subagent together)
 
 ```text
-/plugin marketplace add diegofcornejo/skills
-/plugin install dead-code-hunter@diegofcornejo
-/plugin install deepsec-findings-analyzer@diegofcornejo
-/plugin install random-git@diegofcornejo
+/plugin marketplace add diegofcornejo/random-ai-skills
+/plugin install dead-code-hunter@random-ai-skills
+/plugin install deepsec-findings-analyzer@random-ai-skills
+/plugin install random-git@random-ai-skills
 ```
 
-Or in one step (Claude Code ≥ 2.1.275): `/plugin install dead-code-hunter --marketplace diegofcornejo/skills`.
+Or in one step (Claude Code ≥ 2.1.275): `/plugin install dead-code-hunter --marketplace diegofcornejo/random-ai-skills`.
 
 Plugin components are namespaced: the subagent appears as `dead-code-hunter:dead-code-hunter`, the skills as `/random-git:random-commit`, etc.
 
@@ -44,13 +44,13 @@ Plugin components are namespaced: the subagent appears as `dead-code-hunter:dead
 
 ```bash
 # whole collection
-npx skills add https://github.com/diegofcornejo/skills
+npx skills add https://github.com/diegofcornejo/random-ai-skills
 
 # a single skill
-npx skills add https://github.com/diegofcornejo/skills --skill dead-code-hunter
+npx skills add https://github.com/diegofcornejo/random-ai-skills --skill dead-code-hunter
 
 # globally, for every detected agent
-npx skills add https://github.com/diegofcornejo/skills -g -a '*' -y
+npx skills add https://github.com/diegofcornejo/random-ai-skills -g -a '*' -y
 ```
 
 ### Subagents and commands outside the plugin (OpenCode, or Claude Code without plugins)
@@ -58,9 +58,9 @@ npx skills add https://github.com/diegofcornejo/skills -g -a '*' -y
 `npx skills` only installs skills. Install the companion files with:
 
 ```bash
-git clone https://github.com/diegofcornejo/skills ~/personal/skills
-~/personal/skills/scripts/install-agents.sh            # Claude Code + OpenCode
-~/personal/skills/scripts/install-agents.sh --opencode # only OpenCode
+git clone https://github.com/diegofcornejo/random-ai-skills ~/random-ai-skills
+~/random-ai-skills/scripts/install-agents.sh            # Claude Code + OpenCode
+~/random-ai-skills/scripts/install-agents.sh --opencode # only OpenCode
 ```
 
 It symlinks (so `git pull` updates them) and never overwrites an existing file unless you pass `--force`, which keeps a `.bak.<timestamp>` copy. `--dry-run` shows what would change.
@@ -101,8 +101,8 @@ In OpenCode, `opencode/commands/` provides `/random-commit` and `/random-merge-t
 
 | Channel | How it detects an update | Pin a version |
 |---|---|---|
-| `npx skills check` / `update` | Compares the **git tree SHA of the skill folder** (`skillFolderHash` in `~/.agents/.skill-lock.json` or `skills-lock.json`) with the remote. Any change inside `skills/<name>/` is an update. Changes elsewhere (README, other skills) are not. | `npx skills add diegofcornejo/skills@v1.2.0 --skill <name>` (tag or full commit) |
-| Claude Code plugin | With no `version` in the manifest, the version **is the commit SHA** (12 chars). Every pushed commit is a new version for every plugin in this repo. Third-party marketplaces don't auto-update by default: run `/plugin marketplace update diegofcornejo`, or turn on auto-update in `/plugin` → Marketplaces. | Setting `"version"` pins users to it until you change the string. That's why this repo leaves it out on purpose. |
+| `npx skills check` / `update` | Compares the **git tree SHA of the skill folder** (`skillFolderHash` in `~/.agents/.skill-lock.json` or `skills-lock.json`) with the remote. Any change inside `skills/<name>/` is an update. Changes elsewhere (README, other skills) are not. | `npx skills add diegofcornejo/random-ai-skills@v1.2.0 --skill <name>` (tag or full commit) |
+| Claude Code plugin | With no `version` in the manifest, the version **is the commit SHA** (12 chars). Every pushed commit is a new version for every plugin in this repo. Third-party marketplaces don't auto-update by default: run `/plugin marketplace update random-ai-skills`, or turn on auto-update in `/plugin` → Marketplaces. | Setting `"version"` pins users to it until you change the string. That's why this repo leaves it out on purpose. |
 | `install-agents.sh` symlinks | `git pull` in your clone | `git checkout <tag>` |
 
 Git tags (`v1.0.0`, …) are optional. They're useful for giving people a stable pin, not for making updates work.

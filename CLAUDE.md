@@ -29,7 +29,7 @@ npx skills add file:///Users/diego/personal/skills --skill {skill-name} -y
 Install from GitHub (after pushing):
 
 ```bash
-npx skills add https://github.com/diegofcornejo/skills --skill {skill-name} -y
+npx skills add https://github.com/diegofcornejo/random-ai-skills --skill {skill-name} -y
 ```
 
 Load the whole repo as a session-only Claude Code plugin (skills + subagents, namespaced `skills:`):
@@ -42,7 +42,7 @@ claude plugin validate /Users/diego/personal/skills
 List skills the CLI sees in the repo:
 
 ```bash
-npx skills add https://github.com/diegofcornejo/skills --list
+npx skills add https://github.com/diegofcornejo/random-ai-skills --list
 ```
 
 ## Things to Avoid

@@ -16,7 +16,7 @@ Your full procedure, the "is NOT dead code" checklist, and the exact output form
 2. `${CLAUDE_PLUGIN_ROOT}/skills/dead-code-hunter/references/detection.md` (plugin install).
 3. Search with Glob for `**/dead-code-hunter/references/detection.md` under, in order: `.claude/skills`, `.agents/skills`, `~/.claude/skills`, `~/.agents/skills`, `~/.claude/plugins`.
 
-If none exists, stop and reply: *"dead-code-hunter skill not found — install it with `npx skills add https://github.com/diegofcornejo/skills --skill dead-code-hunter` or the Claude Code plugin."* Do not improvise a protocol.
+If none exists, stop and reply: *"dead-code-hunter skill not found — install it with `npx skills add https://github.com/diegofcornejo/random-ai-skills --skill dead-code-hunter` or the Claude Code plugin."* Do not improvise a protocol.
 
 Then follow Phases 0–2 of that file exactly and return **only** the Detection Report it defines.
 

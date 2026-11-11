@@ -144,13 +144,13 @@ Don't add version fields to make updates work:
 
 ```bash
 # npx skills (any agent)
-npx skills add https://github.com/diegofcornejo/skills
-npx skills add https://github.com/diegofcornejo/skills --skill {skill-name}
-npx skills add https://github.com/diegofcornejo/skills --list
+npx skills add https://github.com/diegofcornejo/random-ai-skills
+npx skills add https://github.com/diegofcornejo/random-ai-skills --skill {skill-name}
+npx skills add https://github.com/diegofcornejo/random-ai-skills --list
 
 # Claude Code plugin (skill + subagent together)
-/plugin marketplace add diegofcornejo/skills
-/plugin install {plugin-name}@diegofcornejo
+/plugin marketplace add diegofcornejo/random-ai-skills
+/plugin install {plugin-name}@random-ai-skills
 
 # Agents/commands for OpenCode or plugin-less Claude Code
 scripts/install-agents.sh

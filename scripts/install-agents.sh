@@ -2,13 +2,13 @@
 # Install the companion subagents / commands of this repo for agents that
 # `npx skills` does not cover (it only installs skills).
 #
-#   Claude Code: prefer the plugin (`/plugin marketplace add diegofcornejo/skills`).
+#   Claude Code: prefer the plugin (`/plugin marketplace add diegofcornejo/random-ai-skills`).
 #                This script is the fallback: agents/*.md -> ~/.claude/agents/
 #   OpenCode:    opencode/agents/*.md   -> ~/.config/opencode/agents/
 #                opencode/commands/*.md -> ~/.config/opencode/commands/
 #
 # Skills themselves are installed with:
-#   npx skills add https://github.com/diegofcornejo/skills
+#   npx skills add https://github.com/diegofcornejo/random-ai-skills
 #
 # Usage: scripts/install-agents.sh [--claude] [--opencode] [--copy] [--force] [--dry-run]
 #   (no target flag = both targets)
@@ -82,5 +82,5 @@ fi
 
 echo "Done: $installed installed, $skipped skipped." >&2
 echo "Reminder: the agents need their skills. Install them with:" >&2
-echo "  npx skills add https://github.com/diegofcornejo/skills" >&2
+echo "  npx skills add https://github.com/diegofcornejo/random-ai-skills" >&2
 printf '{"installed":%d,"skipped":%d}\n' "$installed" "$skipped"
