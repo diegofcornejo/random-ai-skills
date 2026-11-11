@@ -1,0 +1,29 @@
+// Reference OpenCode config (copy to ~/.config/opencode/opencode.jsonc and adapt).
+// Secrets are NEVER committed: export CONTEXT7_API_KEY in your shell instead.
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "chrome-devtools": {
+      "type": "local",
+      "command": ["bunx", "-y", "chrome-devtools-mcp@latest"],
+      "enabled": false
+    },
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}"
+      },
+      "enabled": true
+    },
+    "engram": {
+      "type": "local",
+      "command": ["/opt/homebrew/bin/engram", "mcp", "--tools=agent"],
+      "enabled": true
+    }
+  },
+  "plugin": [
+    "superpowers@git+https://github.com/obra/superpowers.git",
+    "@warp-dot-dev/opencode-warp"
+  ]
+}
