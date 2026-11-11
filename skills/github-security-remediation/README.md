@@ -141,7 +141,8 @@ security-reports/                 # default output directory (configurable)
       report.html                 # self-contained report, printable to PDF from the browser
       summary.txt                 # 5–10 lines to paste into Teams, Slack or email
       snapshot.json               # normalized, secret-free alert data: the source of every number
-      diff.json                   # change against the previous day of the same scope
+      diff.json                   # change against the previous report (run) of the same scope
+      runs/                       # one snapshot per run of the day, named by UTC time (080000.json, 133000.json…)
       narrative.txt               # the analyst notes the agent wrote for the report, in your language
       .cache/                     # transient: exists only during a run, or after an interrupted one (for resume)
 ```
@@ -213,9 +214,9 @@ Priority in brief: a severity base (critical 40, high 30, medium 20, low 10), or
 
 ## 8. Daily usage
 
-- Run portfolio mode once a day with the same prompt (or the same owners). The day folder is named by the **UTC** date, so near midnight it can differ from your calendar day.
-- Re-running on the same UTC day overwrites that day's folder. The latest run of the day is the day's report.
-- **The delta** compares with the most recent earlier day folder of the same scope. `delta` is today's open alerts minus the previous report's.
+- Run portfolio mode once a day with the same prompt (or the same owners), or several times a day (start, midday, end of the day) to follow a campaign. The day folder is named by the **UTC** date, so near midnight it can differ from your calendar day.
+- **Several runs a day.** Each run keeps its snapshot in `<day>/runs/HHMMSS.json` (UTC time) and gets its own point in the trend, labelled with date and time. The other files in the day folder (`report.html`, `summary.txt`, `snapshot.json`, `diff.json`) are always those of the latest run.
+- **The delta** compares with the previous run of the same scope, even one from earlier the same day. `delta` is this report's open alerts minus the previous report's.
 - **Baseline.** The first report for a scope, a report whose owner set changed, or one whose previous `snapshot.json` cannot be read (for example, truncated by a crash), is a baseline. It says so and shows no delta, and the next day compares normally again.
 - **When fixes show up.** Alerts close only on the default branch: Dependabot when the default branch's manifest or lockfile has the fixed version, code scanning when an analysis of the default branch no longer finds the issue. Secret scanning alerts never close by themselves: someone rotates the credential and resolves the alert. Work still on a branch, or merged but not yet rescanned, leaves the alerts open, so ask for the report after the merge and the scan finish.
 - **Lost coverage is not progress.** If an alert disappears because its repo lost scanner coverage (a scanner was turned off, a permission changed), it is not counted as closed. The report shows it as "hidden by lost coverage" next to the delta.

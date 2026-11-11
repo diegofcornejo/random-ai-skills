@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""Diff two snapshots day over day and read snapshot history.
+"""Diff two snapshots run over run and read snapshot history.
 
-Usage: diff_snapshots.py CURRENT.json [--scope-dir DIR --today YYYY-MM-DD | --previous PREV.json] [-o DIFF.json]
+Usage: diff_snapshots.py CURRENT.json [--scope-dir DIR [--today YYYY-MM-DD] | --previous PREV.json] [-o DIFF.json]
+With --scope-dir the previous snapshot is the latest run saved before CURRENT's generated_at (an earlier
+run of the same day counts); --today names the day folder and compares against earlier days only.
 Writes the diff JSON to stdout (and to -o when given); status messages go to stderr.
 
 Diff keys: baseline, reason, totals{prev_open, curr_open, delta, lost_coverage}, closed, new,
@@ -26,6 +28,10 @@ from score import _cluster_keys  # noqa: E402
 
 SOURCES = ("dependabot", "code_scanning", "secret_scanning")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+TIME_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T(\d{2}):(\d{2}):(\d{2})")
+RUN_RE = re.compile(r"^\d{6}\.json$")
+RUNS_DIR = "runs"
+HISTORY_POINTS = 60
 
 
 def alert_key(a):
@@ -146,25 +152,58 @@ def diff(prev, curr, baseline_reason="first_run"):
             "clusters": _cluster_diff(prev, curr, [prev_open[k] for k in lost])}
 
 
-def _snapshots(scope_dir):
+def run_time(generated_at):
+    """HHMMSS of a `YYYY-MM-DDTHH:MM:SS…` timestamp (how run files are named), else None."""
+    m = TIME_RE.match(str(generated_at or ""))
+    return "".join(m.groups()) if m else None
+
+
+def _points(scope_dir):
+    """Every saved run of the scope, oldest first, as (day, time, path).
+
+    A day folder keeps one file per run in `runs/HHMMSS.json` (UTC). A folder written before runs
+    were kept has only `snapshot.json`; it counts as one run with time None, sorted first in its day.
+    The day comes from the folder name (Ruling R12), never from the file's generated_at.
+    """
     scope_dir = Path(scope_dir)
     if not scope_dir.is_dir():
         return []
-    return sorted((d.name, d / "snapshot.json") for d in scope_dir.iterdir()
-                  if d.is_dir() and DATE_RE.match(d.name) and (d / "snapshot.json").is_file())
+    points = []
+    for d in scope_dir.iterdir():
+        if not (d.is_dir() and DATE_RE.match(d.name)):
+            continue
+        runs = sorted(f for f in (d / RUNS_DIR).glob("*.json") if RUN_RE.match(f.name)) \
+            if (d / RUNS_DIR).is_dir() else []
+        if runs:
+            points += [(d.name, f.name[:6], f) for f in runs]
+        elif (d / "snapshot.json").is_file():
+            points.append((d.name, None, d / "snapshot.json"))
+    return sorted(points, key=lambda p: (p[0], p[1] or ""))
 
 
-def find_previous(scope_dir, today):
-    earlier = [p for name, p in _snapshots(scope_dir) if name < today]
+def earlier_than(point, today, now):
+    """Whether a (day, time) point is earlier than the run at `today` / `now` (None: the whole day).
+
+    A folder without runs/ has no run time, so it is earlier only when its day is.
+    """
+    day, time = point
+    if now is None or time is None:
+        return day < today
+    return (day, time) < (today, now)
+
+
+def find_previous(scope_dir, today, now=None):
+    """The latest run saved before this one: an earlier run of the same day when `now` (HHMMSS) is given."""
+    earlier = [p for day, time, p in _points(scope_dir) if earlier_than((day, time), today, now)]
     return earlier[-1] if earlier else None
 
 
-def load_history(scope_dir, limit=30):
+def load_history(scope_dir, limit=HISTORY_POINTS):
     rows = []
-    for name, path in _snapshots(scope_dir):
+    for day, time, path in _points(scope_dir):
         try:
             totals = json.loads(path.read_text())["totals"]
-            rows.append({"date": name, "open": totals["open"], "by_band": totals.get("by_band", {})})
+            rows.append({"date": day, "time": time, "open": totals["open"], "by_band": totals.get("by_band", {})})
         except (OSError, ValueError, KeyError, TypeError):
             print(f"warning: skipping unreadable snapshot {path}", file=sys.stderr)
     return rows[-limit:] if limit else rows
@@ -184,7 +223,9 @@ def main(argv=None):
         if prev_path is not None:  # named explicitly: it must be readable
             prev = json.loads(prev_path.read_text())
         elif args.scope_dir:
-            prev, reason = read_previous(find_previous(args.scope_dir, args.today or curr["generated_at"][:10]))
+            today = args.today or curr["generated_at"][:10]
+            now = None if args.today else run_time(curr["generated_at"])
+            prev, reason = read_previous(find_previous(args.scope_dir, today, now))
     except (OSError, ValueError, KeyError) as e:
         print(json.dumps({"error": f"cannot read snapshot: {e}"}))
         print(f"error: cannot read snapshot: {e}", file=sys.stderr)

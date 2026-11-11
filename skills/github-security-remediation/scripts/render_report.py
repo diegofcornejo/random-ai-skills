@@ -18,7 +18,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from diff_snapshots import DATE_RE, alert_key, load_history  # noqa: E402
+from diff_snapshots import DATE_RE, RUNS_DIR, alert_key, earlier_than, load_history, run_time  # noqa: E402
 
 SKILL_DIR = Path(__file__).resolve().parent.parent
 TEMPLATE = SKILL_DIR / "templates" / "report.html"
@@ -51,7 +51,7 @@ TOKEN_RE = re.compile(r"\{\{([a-z0-9_.]+)\}\}|\[\[([a-z0-9_]+)\]\]")
 TOP_REPOS = 15
 ROW_LIMIT = 50
 RECORD_LIMIT = 100
-TREND_POINTS = 30
+TREND_POINTS = 60
 
 
 def dynamic_keys():
@@ -287,18 +287,28 @@ def _nice_step(raw):
     return 10 * mag
 
 
-def _trend_series(snapshot, history, today=None):
+def _trend_series(snapshot, history, today=None, now=None):
     # Ruling R12: history points are keyed by day-folder name, so today's point uses the folder name
     # too when the caller knows it; otherwise the UTC date of generated_at (how folders are named).
+    # One point per run: `now` (HHMMSS) is this run's time; None means one point for the whole day.
     today = today or (snapshot.get("generated_at") or "")[:10]
-    by_date = {}
+    points = {}
     for h in history or []:
-        d = h.get("date")
-        if isinstance(d, str) and (not today or d < today):
-            by_date[d] = {"date": d, "open": _int(h.get("open")), "by_band": h.get("by_band") or {}}
+        d, tm = h.get("date"), h.get("time")
+        if isinstance(d, str) and (not today or earlier_than((d, tm), today, now)):
+            points[(d, tm or "")] = {"date": d, "time": tm, "open": _int(h.get("open")),
+                                     "by_band": h.get("by_band") or {}}
     totals = snapshot.get("totals") or {}
-    by_date[today] = {"date": today, "open": _int(totals.get("open")), "by_band": totals.get("by_band") or {}}
-    return [by_date[k] for k in sorted(by_date)][-TREND_POINTS:]
+    points[(today, now or "")] = {"date": today, "time": now, "open": _int(totals.get("open")),
+                                  "by_band": totals.get("by_band") or {}}
+    rows = [points[k] for k in sorted(points)][-TREND_POINTS:]
+    # Times are shown only when some day has several runs; a daily series keeps plain dates.
+    days = [r["date"] for r in rows]
+    with_time = len(set(days)) < len(days)
+    for r in rows:
+        tm = r["time"] if with_time else None
+        r["label"] = f'{r["date"]} {tm[:2]}:{tm[2:4]}' if tm else r["date"]
+    return rows, with_time
 
 
 def _trend_svg(t, rows):
@@ -326,7 +336,7 @@ def _trend_svg(t, rows):
         label_idx = sorted({round(i * (n - 1) / 5) for i in range(6)})
     for i in label_idx:
         anchor = "start" if i == 0 and n > 1 else ("end" if i == n - 1 and n > 1 else "middle")
-        label = rows[i]["date"] if i in (0, n - 1) else rows[i]["date"][5:]
+        label = rows[i]["label"] if i in (0, n - 1) else rows[i]["label"][5:]
         parts.append(f'<text class="axis" x="{x(i)}" y="{h - 10}" text-anchor="{anchor}">{e(label)}</text>')
     pts_total = " ".join(f"{x(i)},{y(v)}" for i, v in enumerate(totals))
     pts_p1 = " ".join(f"{x(i)},{y(v)}" for i, v in enumerate(p1))
@@ -337,7 +347,7 @@ def _trend_svg(t, rows):
     for i, v in enumerate(totals):
         parts.append(f'<circle class="mark-total" cx="{x(i)}" cy="{y(v)}" r="3.5"/>')
     parts.append(f'<text class="value" x="{x(n - 1)}" y="{y(totals[-1]) - 9}" text-anchor="end">{totals[-1]}</text>')
-    desc = t("trend.desc", start=rows[0]["date"], end=rows[-1]["date"], first=totals[0], last=totals[-1])
+    desc = t("trend.desc", start=rows[0]["label"], end=rows[-1]["label"], first=totals[0], last=totals[-1])
     return (f'<svg class="chart trend" viewBox="0 0 {w} {h}" role="img" aria-labelledby="trend-t trend-d">'
             f'<title id="trend-t">{t("trend.chart_title")}</title><desc id="trend-d">{desc}</desc>'
             + "".join(parts) + "</svg>")
@@ -528,9 +538,9 @@ def _section_summary(ctx, narrative):
     return "".join(out)
 
 
-def _section_trend(ctx, history, today=None):
+def _section_trend(ctx, history, today=None, now=None):
     t = ctx.t
-    rows = _trend_series(ctx.s, history, today)
+    rows, with_time = _trend_series(ctx.s, history, today, now)
     out = []
     if len(rows) < 2:
         out.append(_note(t("trend.single")))
@@ -538,8 +548,9 @@ def _section_trend(ctx, history, today=None):
         out.append(f'<figure class="trend-fig">{_trend_svg(t, rows)}<figcaption class="legend">'
                    f'<span>{_legend_swatch("line-total")}{t("trend.total")}</span>'
                    f'<span>{_legend_swatch("line-p1")}{t("trend.p1")}</span></figcaption></figure>')
-    table = _table([(t("col.date"), ""), (t("col.open"), "num")] + [(e(b), "num") for b in BANDS],
-                   [[e(r["date"]), r["open"]] + [_int(r["by_band"].get(b)) for b in BANDS] for r in reversed(rows)],
+    table = _table([(t("col.date_time" if with_time else "col.date"), ""), (t("col.open"), "num")]
+                   + [(e(b), "num") for b in BANDS],
+                   [[e(r["label"]), r["open"]] + [_int(r["by_band"].get(b)) for b in BANDS] for r in reversed(rows)],
                    "compact")
     out.append(f'<details class="data"><summary>{t("trend.data")}</summary>{table}</details>')
     return "".join(out)
@@ -850,8 +861,9 @@ def _section_methodology(ctx):
 
 # ---------------------------------------------------------------- public API
 
-def render_html(snapshot, diff, history, lang, narrative=None, today=None):
-    """Render the report. `today` is the day-folder name (YYYY-MM-DD) keying today's trend point."""
+def render_html(snapshot, diff, history, lang, narrative=None, today=None, now=None):
+    """Render the report. `today` is the day-folder name (YYYY-MM-DD) keying today's trend point;
+    `now` is this run's HHMMSS when the day keeps one snapshot per run (None: one point per day)."""
     data, effective = load_strings(lang)
     t = Strings(data, effective)
     ctx = _Ctx(snapshot, diff, t)
@@ -864,7 +876,7 @@ def render_html(snapshot, diff, history, lang, narrative=None, today=None):
         "scope_table": _scope_table(ctx),
         "baseline_notice": _baseline_notice(ctx),
         "summary": _section_summary(ctx, narrative),
-        "trend": _section_trend(ctx, history, today),
+        "trend": _section_trend(ctx, history, today, now),
         "coverage": _section_coverage(ctx),
         "top_risk": _section_top_risk(ctx),
         "campaigns": _section_campaigns(ctx),
@@ -957,7 +969,11 @@ def main(argv=None):
     report = day / "report.html"
     summary = day / "summary.txt"
     today = day.resolve().name if DATE_RE.match(day.resolve().name) else None
-    report.write_text(render_html(snapshot, diff, history, effective, narrative, today=today), encoding="utf-8")
+    now = run_time(snapshot.get("generated_at"))
+    if not (now and (day / RUNS_DIR / f"{now}.json").is_file()):
+        now = None  # a day folder from before runs/ was kept: one point for the whole day
+    report.write_text(render_html(snapshot, diff, history, effective, narrative, today=today, now=now),
+                      encoding="utf-8")
     summary.write_text(render_summary(snapshot, diff, effective), encoding="utf-8")
     print(json.dumps({"report": str(report), "summary": str(summary), "lang": effective}, sort_keys=True))
     print(f"wrote {report} and {summary}", file=sys.stderr)

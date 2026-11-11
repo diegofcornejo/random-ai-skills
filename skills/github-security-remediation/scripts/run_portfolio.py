@@ -6,6 +6,9 @@ Usage: run_portfolio.py (--owner X [--owner Y] | --repo OWNER/NAME [--repo ...])
 --repo limits the report to the named repositories (scope folder: owner__name, joined by +).
 Writes OUT/<scope>/<date>/{snapshot.json,diff.json,report.html,summary.txt}; prints the paths as JSON.
 The day folder is the UTC date of generated_at; --date pins it (generated_at becomes <date>T09:00:00Z).
+Every run also keeps its snapshot as <date>/runs/HHMMSS.json (UTC), so several runs a day each get a
+trend point; the files in the day folder are always those of the latest run, and the diff compares
+against the run before it, even one from earlier the same day.
 """
 import argparse
 import json
@@ -57,13 +60,27 @@ def valid_date(value):
     return True
 
 
+def _keep_legacy_run(day_dir, runs_dir, now):
+    """A day folder written before runs/ existed: keep its snapshot as a run before it is overwritten."""
+    legacy = day_dir / "snapshot.json"
+    if not legacy.is_file() or (runs_dir.is_dir() and any(runs_dir.glob("*.json"))):
+        return
+    try:
+        earlier = diff_snapshots.run_time(json.loads(legacy.read_text(encoding="utf-8")).get("generated_at"))
+    except (OSError, ValueError, AttributeError):
+        return  # unreadable: read_previous reports it, nothing to keep
+    if earlier and earlier != now:
+        runs_dir.mkdir(exist_ok=True)
+        shutil.copyfile(legacy, runs_dir / f"{earlier}.json")
+
+
 def run(owners, host, out_root, lang, include_archived=False, today=None, client=None, repos=None):
     client = client or GhClient(host=host)
     if today:
         generated_at = f"{today}T09:00:00Z"
     else:
         generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    folder = generated_at[:10]
+    folder, now = generated_at[:10], diff_snapshots.run_time(generated_at)
     scope_dir = Path(out_root) / scope_name(owners, repos or ())
     day_dir = scope_dir / folder
     day_dir.mkdir(parents=True, exist_ok=True)
@@ -74,18 +91,24 @@ def run(owners, host, out_root, lang, include_archived=False, today=None, client
     else:
         raw = {"host": host, "owners": [fetch_owner(client, o, include_archived, cache) for o in owners]}
     snap = snapshot.build_snapshot(raw, generated_at)
-    prev, reason = diff_snapshots.read_previous(diff_snapshots.find_previous(scope_dir, folder))
+    runs_dir = day_dir / diff_snapshots.RUNS_DIR
+    _keep_legacy_run(day_dir, runs_dir, now)
+    prev, reason = diff_snapshots.read_previous(diff_snapshots.find_previous(scope_dir, folder, now))
     dif = diff_snapshots.diff(prev, snap, reason)
 
-    paths = {"day_dir": day_dir, "snapshot": day_dir / "snapshot.json", "diff": day_dir / "diff.json",
+    paths = {"day_dir": day_dir, "snapshot": day_dir / "snapshot.json", "run": runs_dir / f"{now}.json",
+             "diff": day_dir / "diff.json",
              "report": day_dir / "report.html", "summary": day_dir / "summary.txt"}
+    runs_dir.mkdir(exist_ok=True)
+    _write_json(paths["run"], snap)
     _write_json(paths["snapshot"], snap)
     _write_json(paths["diff"], dif)
     effective = render_report.load_strings(lang)[1]
     if effective != render_report._lang_code(lang):
         print(f"warning: language {lang!r} not available, using {effective}", file=sys.stderr)
     history = diff_snapshots.load_history(scope_dir)
-    _write_text(paths["report"], render_report.render_html(snap, dif, history, effective, None, today=folder))
+    page = render_report.render_html(snap, dif, history, effective, None, today=folder, now=now)
+    _write_text(paths["report"], page)
     _write_text(paths["summary"], render_report.render_summary(snap, dif, effective))
     shutil.rmtree(cache, ignore_errors=True)
     return {k: str(v) for k, v in paths.items()}

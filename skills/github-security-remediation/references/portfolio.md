@@ -42,9 +42,9 @@ python3 <skill-dir>/scripts/run_portfolio.py --repo <owner>/<name> [--repo <owne
   --host <host> --out <out-dir> --lang <code>
 ```
 
-- It fetches every owner, writes one combined `snapshot.json` (secret-free, deterministic), scores and clusters, diffs against the most recent earlier snapshot of the **same scope** (`diff.json`), and renders `report.html` and `summary.txt`.
-- On success it prints JSON with the paths: `day_dir`, `snapshot`, `diff`, `report`, `summary`.
-- Re-running on the **same UTC day overwrites** that day's folder. That is expected: the latest run of the day is the day's report.
+- It fetches every owner, writes one combined `snapshot.json` (secret-free, deterministic), scores and clusters, diffs against the most recent earlier run of the **same scope** (`diff.json`), and renders `report.html` and `summary.txt`.
+- On success it prints JSON with the paths: `day_dir`, `snapshot`, `run`, `diff`, `report`, `summary`.
+- **Several runs a day are expected** (for example start, midday and end of day during a campaign). Each run also keeps its snapshot as `<day_dir>/runs/HHMMSS.json` (UTC time) and gets its own trend point; the diff compares against the previous run, even one from earlier the same day. The files at the top of the day folder are always the latest run's. A day folder written before `runs/` existed is kept: its `snapshot.json` is moved into `runs/` under its own time on the next run of that day.
 - Large owners take time. In Claude Code, run it with `run_in_background` and wait for it to finish, or give the user the command to run in their own terminal. Progress and rate-limit messages go to stderr.
 
 ### Rate limits and resume
@@ -92,7 +92,7 @@ PY
 ### Narrative rules
 
 - **Numbers only from `snapshot.json` / `diff.json`** (the extraction above, or the files themselves). Quote them; never compute your own: no sums, differences, percentages or averages that the files do not contain. If a number you want is not there, leave it out.
-- **Baseline** (`diff.baseline` is `true`): say it is a baseline (`first_run`, `owner_set_changed`, or `previous_unreadable`: the previous day's `snapshot.json` could not be read) and do not claim any progress or regression.
+- **Baseline** (`diff.baseline` is `true`): say it is a baseline (`first_run`, `owner_set_changed`, or `previous_unreadable`: the previous run's snapshot could not be read) and do not claim any progress or regression.
 - **Delta and lost coverage**: `diff_totals.delta` is `curr_open − prev_open`. Alerts in `lost_coverage` disappeared because their repo/source **lost coverage**; they are **not closures** and must not be presented as progress. Whenever `diff_totals.lost_coverage` is above 0, say so next to the delta.
 - **Coverage**: mention repos without coverage as unknown, never as clean. Repos in `repos_zero_open_partial` / `repos_reached_zero_partial` have 0 open alerts only in the scanners that are readable: say "partial coverage", never "at zero".
 - **Campaigns** ("fix once, close many"): recommend the next one from `top_clusters` (key, repos, alerts, `fix`), or wave 1 when there are open secrets or P1s. Call a campaign **completed only when its `curr_open` in `cluster_moves` is 0**; a cluster that shrank (or dropped below 2 repos) is progress, not completion. `curr_open` already counts the cluster's alerts hidden by lost coverage (the entry's `lost_coverage`): their state is unknown, so a cluster with `lost_coverage` above 0 is never completed. Say how many are hidden. In a single-repo report (`scope.mode` is `repo`), clusters are per package (`pkg:<ecosystem>:<package>`, plus `angular:<major>`): `fix` is the highest first patched version per major line (`brace-expansion>=1.1.21, >=2.0.2` when copies on two majors are installed), `advisories` how many advisories that one upgrade closes, and `unpatched` how many of its alerts have no patched version yet; recommend the largest one.
@@ -114,7 +114,7 @@ Always rewrite `narrative.txt` after each run of the day, so a stale narrative n
 
 In the user's language:
 
-1. The day folder and its files: `report.html` (self-contained, zero network requests, print to PDF from the browser), `summary.txt`, `snapshot.json`, `diff.json`, `narrative.txt`. The report's sections: executive summary (totals, day delta, per-owner table, your narrative), trend over the available snapshots, coverage per repo, top-risk repos, "fix once, close many" campaigns, remediation waves, dismissals audit (who, what, reason, comment), and methodology (how scores and counts are computed).
+1. The day folder and its files: `report.html` (self-contained, zero network requests, print to PDF from the browser), `summary.txt`, `snapshot.json`, `diff.json`, `narrative.txt`. The report's sections: executive summary (totals, day delta, per-owner table, your narrative), trend over the available runs (one point per run), coverage per repo, top-risk repos, "fix once, close many" campaigns, remediation waves, dismissals audit (who, what, reason, comment), and methodology (how scores and counts are computed).
 2. The contents of `summary.txt`, verbatim, ready to paste into Teams, Slack or email.
 3. The caveats that apply: baseline, partial view, repos without coverage, lost coverage.
 4. Daily use: run the same request tomorrow; the diff compares with the latest earlier day of the same owner set. Changing the owner set starts a new baseline.
