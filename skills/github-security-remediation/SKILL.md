@@ -83,6 +83,7 @@ The protocol and the **Analysis Report** format live in [references/repo-analysi
 | Environment | How to run it |
 |-------------|---------------|
 | Claude Code | `Agent` tool with `subagent_type` `security-alerts-analyzer` (plugin install: `github-security-remediation:security-alerts-analyzer`) |
+| OpenCode | The `security-alerts-analyzer` subagent via the subagent tool (or `@security-alerts-analyzer`) |
 | Anything else, or the subagent is not available | Run it **inline**: read `references/repo-analysis.md` and follow it yourself |
 
 Delegation prompt. Fill every placeholder, and pass **absolute** paths (`<skill-dir>` resolved as in section 3):

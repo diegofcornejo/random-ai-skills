@@ -1,6 +1,6 @@
 # github-security-remediation
 
-Turns the alerts in a GitHub **Security** tab (Dependabot, code scanning, secret scanning) into a remediation plan you can act on, and into a daily progress report for a security team. It ships as a Claude Code plugin: this skill plus a read-only analysis subagent, `security-alerts-analyzer`.
+Turns the alerts in a GitHub **Security** tab (Dependabot, code scanning, secret scanning) into a remediation plan you can act on, and into a daily progress report for a security team. It ships as a Claude Code plugin: this skill plus a read-only analysis subagent, `security-alerts-analyzer` (also available for OpenCode).
 
 This README is in English, like everything in the repo. The skill itself answers in the language you write to it: conversation, questions, the plan file, dismissal comments and the report (English and Spanish templates in v1; other languages get an English report and a conversation in your language).
 
@@ -44,14 +44,14 @@ In a plugin install the subagent is namespaced as `github-security-remediation:s
 npx skills add https://github.com/diegofcornejo/random-ai-skills --skill github-security-remediation
 ```
 
-`npx skills` does not install subagents. For Claude Code, add it from a clone of the repo:
+`npx skills` does not install subagents. For Claude Code or OpenCode, add it from a clone of the repo:
 
 ```bash
 git clone https://github.com/diegofcornejo/random-ai-skills ~/random-ai-skills
-~/random-ai-skills/scripts/install-agents.sh --claude
+~/random-ai-skills/scripts/install-agents.sh --claude     # or --opencode, or no flag for both
 ```
 
-This links every subagent in the repo (`agents/*.md`) into `~/.claude/agents/`, not only `security-alerts-analyzer`. Without the subagent the skill still works. It runs the same analysis inline, in your conversation, so it uses more of your context.
+This links every subagent in the repo (`agents/*.md` into `~/.claude/agents/`, `opencode/agents/*.md` into `~/.config/opencode/agents/`), not only `security-alerts-analyzer`. The OpenCode version enforces read-only through permissions: no edits, `gh api` GET only, no dismissals or installs. Without the subagent the skill still works. It runs the same analysis inline, in your conversation, so it uses more of your context.
 
 Pick one channel. Installing through both gives you duplicates.
 
