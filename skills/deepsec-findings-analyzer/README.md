@@ -17,12 +17,14 @@ After running a deepsec scan, you typically end up with dozens or hundreds of fi
 
 ### 1. Generate the JSON export from deepsec
 
-After your scan, export findings as JSON (not the default `md-dir`):
+After your scan, export findings as JSON:
 
 ```bash
 cd .deepsec
-pnpm deepsec export --format json --out findings.json
+npx deepsec export --format json --include-resolved --out findings.json
 ```
+
+`--include-resolved` keeps findings revalidated as `fixed`, `false-positive`, `accepted-risk` or `duplicate`. deepsec hides them by default; without them the report can't show what is already resolved. To run the scan itself, use deepsec's own `/deepsec` skill.
 
 > ⚠️ Add `findings.json` to your `.gitignore`. It contains code snippets and exploitation reasoning for real vulnerabilities — keep it out of public repos.
 
@@ -50,7 +52,7 @@ The skill offers three levels:
 |-------|--------------|----------|
 | **1: Quick summary** | Counts, distributions, hot spots. No interpretation. | Getting oriented in 30 seconds |
 | **2: Pattern analysis** | Root-cause detection, cross-cutting patterns, prioritized plan. | Most cases — the recommended starting point |
-| **3: Deep analysis** | Reads source code, validates findings, proposes fixes. | When you're ready to start fixing |
+| **3: Deep analysis** | Reads source code, rules each finding confirmed / mitigated / stale / uncertain, proposes fixes. In Claude Code and OpenCode this runs in parallel `deepsec-finding-verifier` subagents, one per group. | When you're ready to start fixing |
 
 You can move up levels mid-session — start at 1 to get oriented, then ask "do level 3 on the SSRF group".
 
@@ -184,13 +186,17 @@ After the initial report, you can ask things like:
 
 - The skill never writes findings to disk unless you ask.
 - Reports are generated in chat as Markdown; copy-paste them where you want.
+- `findings.json` also carries people's names and emails (assignees, on-call, contributors). To share results, `python3 scripts/redact.py findings.json` writes a copy without paths, code, URLs, project name or people.
 - The skill won't run `deepsec export` without explicit permission.
 - The skill won't run `deepsec triage` without explicit permission (it costs money or quota).
 - The skill won't read your source code unless you choose Level 3 or ask during drill-down.
+- The verifier subagent is read-only: no edits, no `deepsec` commands, no running your code. A `mitigated` verdict is only a candidate false positive; the skill offers `deepsec revalidate` (with its cost) instead of marking it.
 
 ## Workaround for deepsec issue #64
 
-[deepsec#64](https://github.com/vercel-labs/deepsec/issues/64) is a known bug where `deepsec export` does not include the `triage` field, even after `deepsec triage` has been run. The data is stored correctly in the FileRecords but isn't propagated to exports.
+[deepsec#64](https://github.com/vercel-labs/deepsec/issues/64) is a known bug where `deepsec export` does not include the `triage` field, even after `deepsec triage` has been run. The data is stored correctly in the FileRecords but isn't propagated to exports. Still open as of deepsec 2.3.12.
+
+Also note that `deepsec triage` covers one severity per run (`--severity`, MEDIUM by default).
 
 The skill detects this case and uses `scripts/merge-triage.py` to read triage data directly from the FileRecords and inject it into the export. From then on, analysis proceeds normally with full triage data.
 
@@ -212,13 +218,15 @@ Default lookup walks `data/<projectId>/`, `.deepsec/data/<projectId>/`, and the 
 |-------|---------------|--------|
 | `fixed` | native `metadata.revalidation.verdict` | `deepsec revalidate` (verifies via git history) |
 | `false-positive` | native `metadata.revalidation.verdict` | `deepsec revalidate` |
+| `accepted-risk` | native `metadata.revalidation.verdict` | manual marker in deepsec (real issue the team accepts) |
+| `duplicate` | native `metadata.revalidation.verdict` | `deepsec revalidate` (same issue as another finding in the file) |
 | `true-positive` / `uncertain` | native `metadata.revalidation.verdict` | `deepsec revalidate` |
 | `in-progress` | sidecar | the skill / user |
 | `wont-fix` | sidecar | the skill / user |
 | `needs-review` | sidecar | the skill / user |
 | `fixed-manual` | sidecar | the skill / user (no git verification) |
 
-Native verdicts always win over sidecar state when both exist for `fixed` / `false-positive`. The sidecar fills only the gap states deepsec doesn't have. To mark something `fixed` or `false-positive` rigorously, run `deepsec revalidate` — the skill will offer this as a hybrid option whenever you ask to mark a finding fixed/FP.
+Native verdicts always win over sidecar state when both exist for `fixed` / `false-positive` / `accepted-risk` / `duplicate`. The sidecar fills only the gap states deepsec doesn't have. To mark something `fixed` or `false-positive` rigorously, run `deepsec revalidate` — the skill will offer this as a hybrid option whenever you ask to mark a finding fixed/FP.
 
 ### Session log
 
@@ -236,7 +244,7 @@ python3 scripts/state.py session-close findings.json <sid> --summary "..."
 
 Finding key format: `<filePath>::<vulnSlug>::<firstLineNumber>`.
 
-> The sidecar is deepsec-data-adjacent, not codebase-adjacent. If you want to share triage progress with teammates, commit `data/<projectId>/findings-status.json`. If not, leave it gitignored.
+> The sidecar is deepsec-data-adjacent, not codebase-adjacent. deepsec's scaffold does **not** gitignore it, and it names vulnerable files. If you want to share triage progress with teammates in a private repo, commit `.deepsec/data/<projectId>/findings-status.json`. Otherwise add it to `.gitignore`.
 
 ## What this skill is NOT
 

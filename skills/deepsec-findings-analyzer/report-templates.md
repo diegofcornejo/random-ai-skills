@@ -142,12 +142,24 @@ These findings have `confidence: low` and might be safe to dismiss after a quick
 
 ## Level 3 Template
 
-Use the Level 2 template as the base, then add this section at the end:
+Use the Level 2 template as the base, then add these sections at the end:
 
 ```markdown
+## Code Verification
+
+Checked against commit `{sha}`. {n} findings in {g} groups verified; {list of groups left out and why, if any}.
+
+| Finding | Severity | Verdict | Evidence |
+|---------|----------|---------|----------|
+| `{path}:{line}` {title} | {sev} | confirmed / mitigated / stale / uncertain | {one line with path:line} |
+
+### Candidates to revalidate
+
+{`mitigated` and `stale` findings: why each may be a false positive or already fixed. Offer `deepsec revalidate --filter <path> --only-slugs <slug>` with the cost disclosure; never mark them yourself.}
+
 ## Concrete Fix Proposals
 
-{For each P0 group and selected P1 groups where code reading was performed}
+{One per root cause among `confirmed` findings, from the Verification Reports}
 
 ### Fix: {Group name}
 

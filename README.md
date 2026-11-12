@@ -83,9 +83,12 @@ Detect and safely remove dead code in JS/TS projects (Node, React, monorepos): o
 - **Skill**: orchestrates preconditions → detection → plan → approval → execution.
 - **Subagent** (optional): read-only detection worker with no Edit/Write tools. It keeps analyzer output out of your main context and returns a compact Detection Report. You can also call it directly when you only want a report.
 
-### [deepsec-findings-analyzer](skills/deepsec-findings-analyzer)
+### [deepsec-findings-analyzer](skills/deepsec-findings-analyzer) · subagent: [`deepsec-finding-verifier`](agents/deepsec-finding-verifier.md)
 
 Triage security findings from a [deepsec](https://github.com/vercel-labs/deepsec) scan: group by root cause, prioritize by impact and effort, keep triage state across sessions, and generate ticket-ready drafts.
+
+- **Skill**: locates and validates the export, merges triage data, tracks state, and writes the report at the level you choose.
+- **Subagent** (optional): read-only verifier for deep analysis. One per group of findings, run in parallel: it reads the source, rules each finding confirmed / mitigated / stale / uncertain, and drafts fixes, keeping the code out of your main context.
 
 ### [github-security-remediation](skills/github-security-remediation) · subagent: [`security-alerts-analyzer`](agents/security-alerts-analyzer.md)
 

@@ -21,10 +21,11 @@
     {
       "name": "deepsec-findings-analyzer",
       "source": "./",
-      "description": "Triage deepsec security scan findings: group by root cause, prioritize, and draft tickets.",
+      "description": "Triage deepsec security scan findings: group by root cause, prioritize, track state across sessions, and draft tickets. A read-only subagent verifies findings against the source code in its own context.",
       "category": "security",
-      "keywords": ["security", "deepsec", "triage"],
-      "skills": ["./skills/deepsec-findings-analyzer"]
+      "keywords": ["security", "deepsec", "triage", "vulnerabilities"],
+      "skills": ["./skills/deepsec-findings-analyzer"],
+      "agents": ["./agents/deepsec-finding-verifier.md"]
     },
     {
       "name": "github-security-remediation",

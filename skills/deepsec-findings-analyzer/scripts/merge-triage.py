@@ -13,6 +13,9 @@ Arguments:
   findings.json   Path to the JSON export from `deepsec export --format json`
   files-dir       Path to the deepsec FileRecord directory
                   (typically `.deepsec/data/<project-id>/files/`)
+
+Findings are matched on (filePath, vulnSlug, lineNumbers), then on title,
+then on (filePath, vulnSlug) only when that pair is unambiguous.
   output.json     Optional output path. Defaults to <findings>.merged.json
 
 If the bug is later fixed and triage is already in findings.json, this
@@ -20,20 +23,32 @@ script is a no-op and exits cleanly. Safe to run unconditionally.
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 
 
-def collect_triage_from_filerecords(files_dir: Path) -> dict:
-    """
-    Walk the FileRecord directory and build a map:
-        (filePath, vulnSlug) -> triage object
+SEV_PREFIX = re.compile(r"^\[[A-Z_]+\]\s*")
 
-    Why two-key match: a single file can have multiple findings (different
-    vulnSlugs), so filePath alone isn't unique. The pair (filePath, vulnSlug)
-    is stable across export runs.
+
+def keys_for(file_path: str, slug: str, lines, title: str) -> list:
+    """Match keys from most to least specific.
+
+    One file can hold several findings with the same vulnSlug (e.g. two SSRF
+    sinks), so (filePath, vulnSlug) alone is not unique. Line numbers come
+    first, then the title (`deepsec export` prefixes it with "[SEVERITY] ").
     """
+    return [
+        ("lines", file_path, slug, tuple(lines or ())),
+        ("title", file_path, slug, SEV_PREFIX.sub("", title or "").strip()),
+        ("slug", file_path, slug),
+    ]
+
+
+def collect_triage_from_filerecords(files_dir: Path) -> dict:
+    """Walk the FileRecord directory and index every triage by keys_for()."""
     triage_map = {}
+    ambiguous = set()
     record_count = 0
     triage_count = 0
 
@@ -45,20 +60,23 @@ def collect_triage_from_filerecords(files_dir: Path) -> dict:
             continue
 
         record_count += 1
-
         file_path = record.get("filePath")
         if not file_path:
             continue
 
         for finding in record.get("findings", []):
             triage = finding.get("triage")
-            if not triage:
-                continue
             slug = finding.get("vulnSlug")
-            if not slug:
+            if not triage or not slug:
                 continue
-            triage_map[(file_path, slug)] = triage
             triage_count += 1
+            for key in keys_for(file_path, slug, finding.get("lineNumbers"), finding.get("title")):
+                if key in triage_map and triage_map[key] != triage:
+                    ambiguous.add(key)  # never guess between two different triages
+                triage_map.setdefault(key, triage)
+
+    for key in ambiguous:
+        triage_map.pop(key, None)
 
     return {
         "map": triage_map,
@@ -99,7 +117,11 @@ def merge(findings_path: Path, files_dir: Path) -> dict:
             no_match += 1
             continue
 
-        triage = triage_map.get((file_path, slug))
+        triage = None
+        for key in keys_for(file_path, slug, md.get("lineNumbers"), finding.get("title")):
+            triage = triage_map.get(key)
+            if triage:
+                break
         if triage:
             md["triage"] = triage
             injected += 1
@@ -166,6 +188,10 @@ def main():
         if stats["no_match"]:
             print(
                 f"  ⚠ {stats['no_match']} finding(s) have no triage in either source"
+            )
+            print(
+                "    (`deepsec triage` covers one severity per run, MEDIUM by default;"
+                " run it with --severity for the others)"
             )
         print(f"  Scanned {stats['filerecords_scanned']} FileRecord(s)")
 

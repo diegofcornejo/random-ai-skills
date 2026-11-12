@@ -70,8 +70,9 @@ def compute_stats(findings: list, sidecar: dict | None = None) -> dict:
 
     # Directory aggregation (top-3 path segments)
     def get_dir(path: str, depth: int = 3) -> str:
-        parts = path.split("/")[:depth]
-        return "/".join(parts)
+        # Directory only: a shallow path must not count its file name as a dir.
+        parts = path.split("/")[:-1][:depth]
+        return "/".join(parts) or "."
 
     by_dir = Counter(get_dir(f["metadata"]["filePath"]) for f in findings)
 
@@ -167,7 +168,9 @@ def print_human(stats: dict) -> None:
     if stats["low_confidence_findings"]:
         print(f"Low-confidence findings ({len(stats['low_confidence_findings'])}):")
         for f in stats["low_confidence_findings"]:
-            print(f"  [{f['severity']}] {f['title']}")
+            # `deepsec export` titles already start with "[SEVERITY] ".
+            title = f["title"] if f["title"].startswith("[") else f"[{f['severity']}] {f['title']}"
+            print(f"  {title}")
             print(f"    Path: {f['path']}")
             print(f"    Slug: {f['slug']}")
     else:

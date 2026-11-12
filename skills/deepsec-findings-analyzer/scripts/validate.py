@@ -18,8 +18,16 @@ from pathlib import Path
 REQUIRED_TOP_LEVEL_KEYS = ["title", "description", "severity", "metadata"]
 REQUIRED_METADATA_KEYS = ["projectId", "filePath", "severity", "vulnSlug"]
 KNOWN_SEVERITIES = {"CRITICAL", "HIGH", "HIGH_BUG", "MEDIUM", "LOW", "BUG"}
-KNOWN_VERDICTS = {"true-positive", "false-positive", "fixed", "uncertain", None}
+KNOWN_VERDICTS = {
+    "true-positive", "false-positive", "fixed", "uncertain",
+    "accepted-risk",  # manual marker: real issue the team chose to live with
+    "duplicate",      # same issue as another finding in the file
+    None,
+}
 SIDECAR_STATES = {"in-progress", "wont-fix", "needs-review", "fixed-manual"}
+
+
+WARNINGS: list[str] = []
 
 
 def validate(path: str) -> tuple[bool, str]:
@@ -62,9 +70,10 @@ def validate(path: str) -> tuple[bool, str]:
 
     # Spot-check severities
     severities = {f.get("metadata", {}).get("severity") for f in data}
+    # Unknown enum values are a newer deepsec, not a broken file: warn, don't fail.
     unknown = severities - KNOWN_SEVERITIES
     if unknown:
-        return False, f"Unknown severity values found: {unknown}"
+        WARNINGS.append(f"unknown severity values (newer deepsec?): {sorted(map(str, unknown))}")
 
     # Spot-check verdicts
     verdicts = {
@@ -73,7 +82,7 @@ def validate(path: str) -> tuple[bool, str]:
     }
     unknown_v = verdicts - KNOWN_VERDICTS
     if unknown_v:
-        return False, f"Unknown revalidation verdicts found: {unknown_v}"
+        WARNINGS.append(f"unknown revalidation verdicts (newer deepsec?): {sorted(map(str, unknown_v))}")
 
     return True, ""
 
@@ -83,9 +92,13 @@ def print_summary(path: str) -> None:
         data = json.load(f)
 
     severities = {}
+    verdicts = {}
     for finding in data:
         sev = finding["metadata"]["severity"]
         severities[sev] = severities.get(sev, 0) + 1
+        v = (finding["metadata"].get("revalidation") or {}).get("verdict") or "none"
+        verdicts[v] = verdicts.get(v, 0) + 1
+    resolved = sum(verdicts.get(v, 0) for v in ("fixed", "false-positive", "accepted-risk", "duplicate"))
 
     project_ids = {f["metadata"]["projectId"] for f in data}
 
@@ -94,6 +107,10 @@ def print_summary(path: str) -> None:
     print(f"  Findings: {len(data)}")
     print(f"  Projects: {', '.join(project_ids)}")
     print(f"  Severities: {dict(severities)}")
+    print(f"  Verdicts: {dict(verdicts)}")
+    if resolved == 0:
+        print("  Note: no resolved verdicts (fixed / false-positive / accepted-risk / duplicate).")
+        print("        `deepsec export` hides them unless you pass --include-resolved.")
 
 
 def validate_sidecar(sidecar_path: Path, expected_project_id: str) -> tuple[bool, str]:
@@ -159,6 +176,8 @@ def main():
         sys.exit(1)
 
     print_summary(str(args.findings))
+    for w in WARNINGS:
+        print(f"  ⚠ {w}")
 
     if args.check_state:
         sys.path.insert(0, str(Path(__file__).parent))

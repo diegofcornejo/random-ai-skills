@@ -14,6 +14,7 @@ Add --min-size N to only include groups with N+ findings (default: 1).
 """
 
 import json
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -62,7 +63,8 @@ def group_findings(findings: list, by: str) -> dict:
 
         groups[key].append(
             {
-                "title": f["title"],
+                # `deepsec export` prefixes titles with "[SEVERITY] "; severity is shown separately.
+                "title": re.sub(r"^\[[A-Z_]+\]\s*", "", f["title"]),
                 "path": md["filePath"],
                 "lineNumbers": md.get("lineNumbers", []),
                 "severity": md["severity"],

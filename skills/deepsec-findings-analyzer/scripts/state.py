@@ -4,7 +4,7 @@ Sidecar state management for deepsec-findings-analyzer.
 
 The skill is multi-session. deepsec stores native verdicts in
 `metadata.revalidation.verdict` (true-positive, false-positive, fixed,
-uncertain), but it has no concept of human-curated states like
+uncertain, accepted-risk, duplicate), but it has no concept of human-curated states like
 "in-progress" or "wont-fix". This script manages those gap states in a
 sidecar JSON file at:
 
@@ -80,7 +80,8 @@ from pathlib import Path
 
 SCHEMA_VERSION = 1
 VALID_STATES = {"in-progress", "wont-fix", "needs-review", "fixed-manual"}
-NATIVE_TERMINAL_VERDICTS = {"fixed", "false-positive"}
+# Resolved verdicts: deepsec's own export hides these by default.
+NATIVE_TERMINAL_VERDICTS = {"fixed", "false-positive", "accepted-risk", "duplicate"}
 SIDECAR_FILENAME = "findings-status.json"
 
 
@@ -191,7 +192,7 @@ def native_verdict(finding: dict) -> str | None:
 def effective_state(finding: dict, sidecar_entry: dict | None) -> str:
     """
     Precedence:
-      1. Native fixed / false-positive → "native:<verdict>"
+      1. Native fixed / false-positive / accepted-risk / duplicate → "native:<verdict>"
       2. Sidecar state if present
       3. Native true-positive → "native:true-positive"
       4. Native uncertain → "uncertain"
@@ -403,7 +404,15 @@ def cmd_orphans(args) -> int:
     live_keys = {finding_key(x) for x in findings}
     orphans = sorted(set(sidecar.get("findings", {})) - live_keys)
 
-    print(json.dumps({"sidecar_path": str(p), "orphans": orphans}, indent=2))
+    out = {"sidecar_path": str(p), "orphans": orphans}
+    if orphans and not any(native_verdict(f) in NATIVE_TERMINAL_VERDICTS for f in findings):
+        out["hint"] = (
+            "This export has no resolved findings. `deepsec export` hides fixed / "
+            "false-positive / accepted-risk / duplicate unless you pass --include-resolved, "
+            "so these orphans may simply be resolved findings. Re-export with "
+            "--include-resolved before treating them as stale."
+        )
+    print(json.dumps(out, indent=2))
     return 0
 
 

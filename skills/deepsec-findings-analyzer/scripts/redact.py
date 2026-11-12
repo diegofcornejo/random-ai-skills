@@ -16,8 +16,11 @@ What gets redacted:
   - lineNumbers: removed
   - description: code snippets removed (kept reasoning)
   - title: kept (so categorization is preserved)
-  - metadata.githubUrl: removed
-  - metadata.owners.suggestedAssignee: removed (PII)
+  - metadata.githubUrl, URLs in text: removed
+  - assignee, metadata.owners, and the Owners / Top contributors /
+    Recent committers sections of the description: removed (names, emails)
+  - project name: removed
+  - triage reasoning: redacted (priority / exploitability / impact kept)
 
 What's kept:
   - severity, vulnSlug, confidence, revalidation verdict
@@ -42,8 +45,21 @@ def hash_path(path: str) -> str:
     return f"<redacted-{h}>"
 
 
+# Description sections `deepsec export` fills with people (names, emails, handles).
+PEOPLE_SECTIONS = re.compile(
+    r"^## (Owners|Top contributors|Recent committers[^\n]*)\n[\s\S]*?(?=^## |\Z)", re.MULTILINE
+)
+
+
 def redact_text(text: str) -> str:
-    """Remove code snippets and file paths from descriptive text."""
+    """Remove people, code snippets, URLs and file paths from descriptive text."""
+    text = PEOPLE_SECTIONS.sub("", text)
+    text = re.sub(r"^\*\*Project:\*\*.*$", "**Project:** [redacted]", text, flags=re.MULTILINE)
+    # Markdown links and bare URLs (repo, org, branch)
+    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)
+    text = re.sub(r"https?://\S+", "[url-redacted]", text)
+    text = re.sub(r"[\w.+-]+@[\w-]+\.[\w.-]+", "[email-redacted]", text)
+    text = re.sub(r"(?<![\w.])@[A-Za-z0-9-]{2,}", "[handle-redacted]", text)
     # Remove fenced code blocks
     text = re.sub(r"```[\s\S]*?```", "[CODE REDACTED]", text)
     # Remove inline code
@@ -53,9 +69,7 @@ def redact_text(text: str) -> str:
     # Remove line number references
     text = re.sub(r"\bline\s*\d+\b", "[line-redacted]", text, flags=re.IGNORECASE)
     text = re.sub(r"\blines\s*[\d,\s\-]+\b", "[lines-redacted]", text, flags=re.IGNORECASE)
-    # Remove emails
-    text = re.sub(r"[\w.+-]+@[\w-]+\.[\w.-]+", "[email-redacted]", text)
-    return text
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 
 def redact_finding(finding: dict) -> dict:
@@ -85,6 +99,13 @@ def redact_finding(finding: dict) -> dict:
             "verdict": reval.get("verdict"),
             "reasoning": redact_text(reval.get("reasoning", "")),
         }
+
+    triage = md.get("triage")
+    if triage:
+        redacted["metadata"]["triage"] = {
+            k: triage.get(k) for k in ("priority", "exploitability", "impact")
+        }
+        redacted["metadata"]["triage"]["reasoning"] = redact_text(triage.get("reasoning", ""))
 
     return redacted
 
