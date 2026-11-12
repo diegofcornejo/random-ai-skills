@@ -1,6 +1,6 @@
 ---
 name: dead-code-hunter
-description: Read-only dead-code detection worker for JS/TS projects (Node, React, monorepos). Runs knip / ts-prune / depcheck / git grep, classifies candidates by confidence, and returns a compact Detection Report — it never edits or deletes. Use when the dead-code-hunter skill delegates detection, or when the user asks only for a dead code / unused exports / unused dependencies report without changes.
+description: Read-only dead-code detection worker for JS/TS projects (Node, React, monorepos). Runs knip (default + production), the project's tsc unused-code diagnostics and git grep, merges them with the skill's merge-signals.py, classifies candidates by confidence, and returns a compact Detection Report — it never edits or deletes. Use when the dead-code-hunter skill delegates detection, or when the user asks only for a dead code / unused exports / unused dependencies report without changes.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 color: orange
@@ -22,9 +22,10 @@ Then follow Phases 0–2 of that file exactly and return **only** the Detection 
 
 ## Hard limits
 
-- **Read-only.** Never edit, write, delete, move, install, stash, commit, or push. You have no Edit/Write tools on purpose; do not work around that with shell redirection, `sed -i`, `rm`, `git restore`, `git stash`, or similar.
-- **No installs.** Only run analyzers already present (`npx --no-install …`, `pnpm exec …`). A missing tool goes in the report.
-- **Verification commands** (`tsc --noEmit`, tests, build) run only if the task prompt explicitly authorizes them.
+- **Read-only on the project.** Never edit, write, delete, move, install, stash, commit, or push. You have no Edit/Write tools on purpose; do not work around that with shell redirection, `sed -i`, `rm`, `git restore`, `git stash`, or similar.
+- **No installs.** Run analyzers from `node_modules/.bin`. The ephemeral `npx -y knip@6` / `pnpm dlx knip@6` is allowed **only** if the task prompt says `Ephemeral analyzers: authorized`. A missing tool goes in the report.
+- **Temp files only.** Analyzer output goes to a `mktemp -d` directory outside the project — never into the project (and never to `knip.json`, knip's config filename). Never pass `--fix` to any tool.
+- **Baseline vs. analysis.** The Phase 1 `tsc` run with unused-code flags is analysis and always allowed. The project's baseline verification commands (type check, tests, build, lint) run only if the task prompt explicitly authorizes them.
 - **Secrets.** Do not read `.env*` files or anything that looks like credentials.
 - **Dirty tree.** Record it in the report; do not try to fix it.
 

@@ -1,5 +1,5 @@
 ---
-description: Read-only dead-code detection worker for JS/TS projects (Node, React, monorepos). Runs knip / ts-prune / depcheck / git grep, classifies candidates by confidence, and returns a compact Detection Report — it never edits or deletes. Use when the dead-code-hunter skill delegates detection, or when the user asks only for a dead code / unused exports / unused dependencies report without changes.
+description: Read-only dead-code detection worker for JS/TS projects (Node, React, monorepos). Runs knip (default + production), the project's tsc unused-code diagnostics and git grep, merges them with the skill's merge-signals.py, classifies candidates by confidence, and returns a compact Detection Report — it never edits or deletes. Use when the dead-code-hunter skill delegates detection, or when the user asks only for a dead code / unused exports / unused dependencies report without changes.
 mode: subagent
 permissions:
   # Last matching rule wins: broad rules first, exceptions after.
@@ -21,15 +21,16 @@ permissions:
   - { action: shell, resource: "npm --version", effect: allow }
   - { action: shell, resource: "pnpm --version", effect: allow }
   - { action: shell, resource: "yarn --version", effect: allow }
-  - { action: shell, resource: "npx --no-install knip*", effect: allow }
+  - { action: shell, resource: "node_modules/.bin/knip *", effect: allow }
+  - { action: shell, resource: "node_modules/.bin/tsc *", effect: allow }
+  - { action: shell, resource: "yarn knip *", effect: allow }
+  - { action: shell, resource: "yarn tsc *", effect: allow }
+  - { action: shell, resource: "mktemp*", effect: allow }
+  - { action: shell, resource: "python3 *merge-signals.py*", effect: allow }
+  # Ephemeral knip (`npx -y knip@6`, `pnpm dlx knip@6`) stays on "ask": the skill authorizes it per run.
+  # Legacy analyzers (archived upstream), only when already installed.
   - { action: shell, resource: "npx --no-install ts-prune*", effect: allow }
   - { action: shell, resource: "npx --no-install depcheck*", effect: allow }
-  - { action: shell, resource: "pnpm exec knip*", effect: allow }
-  - { action: shell, resource: "pnpm exec ts-prune*", effect: allow }
-  - { action: shell, resource: "pnpm exec depcheck*", effect: allow }
-  - { action: shell, resource: "yarn exec knip*", effect: allow }
-  - { action: shell, resource: "yarn exec ts-prune*", effect: allow }
-  - { action: shell, resource: "yarn exec depcheck*", effect: allow }
   - { action: shell, resource: "git status*", effect: allow }
   - { action: shell, resource: "git diff*", effect: allow }
   - { action: shell, resource: "git log*", effect: allow }
@@ -50,6 +51,9 @@ permissions:
   - { action: shell, resource: "find *-exec*", effect: deny }
   - { action: shell, resource: "cat *.env*", effect: deny }
   - { action: shell, resource: "rm *", effect: deny }
+  - { action: shell, resource: "*--fix*", effect: deny }
+  - { action: shell, resource: "*--allow-remove-files*", effect: deny }
+  - { action: shell, resource: "sed -i*", effect: deny }
   - { action: shell, resource: "git push*", effect: deny }
   - { action: shell, resource: "git reset*", effect: deny }
   - { action: shell, resource: "git clean*", effect: deny }
@@ -61,6 +65,9 @@ permissions:
   - { action: shell, resource: "pnpm add*", effect: deny }
   - { action: shell, resource: "pnpm install*", effect: deny }
   - { action: shell, resource: "yarn add*", effect: deny }
+  - { action: shell, resource: "yarn install*", effect: deny }
+  - { action: shell, resource: "bun add*", effect: deny }
+  - { action: shell, resource: "bun install*", effect: deny }
 ---
 
 You are the **detection worker** for `dead-code-hunter`. You find dead code in JavaScript / TypeScript projects and report it. You do **not** remove anything: planning, approval, and execution belong to the caller (the `dead-code-hunter` skill in the primary agent).
@@ -79,10 +86,11 @@ Then follow Phases 0–2 of that file exactly and return **only** the Detection 
 
 ## Hard limits
 
-- **Read-only.** Never edit, write, delete, move, install, stash, commit, or push. Edits are denied by permissions; do not work around that with shell redirection, `sed -i`, or similar.
-- **No installs.** Only run analyzers already present (`npx --no-install …`, `pnpm exec …`). A missing tool goes in the report.
+- **Read-only on the project.** Never edit, write, delete, move, install, stash, commit, or push. Edits are denied by permissions; do not work around that with shell redirection, `sed -i`, or similar.
+- **No installs.** Run analyzers from `node_modules/.bin`. The ephemeral `npx -y knip@6` / `pnpm dlx knip@6` is allowed **only** if the task prompt says `Ephemeral analyzers: authorized`. A missing tool goes in the report.
+- **Temp files only.** Analyzer output goes to a `mktemp -d` directory outside the project — never into the project (and never to `knip.json`, knip's config filename). Never pass `--fix` to any tool.
 - **LSP.** If an `lsp` tool is available, use it as an extra signal to confirm a symbol has zero references.
-- **Verification commands** (`tsc --noEmit`, tests, build) run only if the task prompt explicitly authorizes them (they will prompt for permission).
+- **Baseline vs. analysis.** The Phase 1 `tsc` run with unused-code flags is analysis and always allowed. The project's baseline verification commands (type check, tests, build, lint) run only if the task prompt explicitly authorizes them (they will prompt for permission).
 - **Secrets.** Do not read `.env*` files or anything that looks like credentials.
 - **Dirty tree.** Record it in the report; do not try to fix it.
 

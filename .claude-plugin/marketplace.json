@@ -14,7 +14,7 @@
       "source": "./",
       "description": "Find and safely remove dead code in JS/TS projects. Skill orchestrates plan/approval/execution; a read-only subagent runs detection in its own context.",
       "category": "development",
-      "keywords": ["dead-code", "knip", "ts-prune", "depcheck", "cleanup"],
+      "keywords": ["dead-code", "knip", "unused-exports", "unused-dependencies", "tsc", "cleanup"],
       "skills": ["./skills/dead-code-hunter"],
       "agents": ["./agents/dead-code-hunter.md"]
     },

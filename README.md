@@ -78,7 +78,7 @@ It symlinks (so `git pull` updates them) and never overwrites an existing file u
 
 ### [dead-code-hunter](skills/dead-code-hunter) · subagent: [`dead-code-hunter`](agents/dead-code-hunter.md)
 
-Detect and safely remove dead code in JS/TS projects (Node, React, monorepos): orphan files, unused exports, unreferenced imports, unused dependencies. It collects multiple signals (knip, ts-prune, depcheck, git grep, LSP), proposes a risk-ordered plan, and executes it in reversible, one-commit-per-batch steps only after approval.
+Detect and safely remove dead code in JS/TS projects (Node, React, monorepos): orphan files, unused exports and types, unused imports and locals, unreachable code, unused dependencies, and code that only tests use. It combines independent signals (knip in default and production mode, the project's own `tsc` unused-code diagnostics, `git grep`, LSP) through a bundled merge script, proposes a risk-ordered plan, and executes it in reversible, one-commit-per-batch steps only after approval. If knip isn't installed it can run it ephemerally (`npx -y knip@6`) with your permission, without touching `package.json`.
 
 - **Skill**: orchestrates preconditions → detection → plan → approval → execution.
 - **Subagent** (optional): read-only detection worker with no Edit/Write tools. It keeps analyzer output out of your main context and returns a compact Detection Report. You can also call it directly when you only want a report.
