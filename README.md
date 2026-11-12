@@ -98,8 +98,8 @@ Turn a repo's GitHub security alerts (Dependabot, code scanning, secret scanning
 
 User-invoked git workflows (`disable-model-invocation: true`, so the agent never runs them on its own):
 
-- `/random-commit [context]`: groups pending changes into semantic commits by intent, then pushes.
-- `/random-merge-to-main`: fast-forward merges the current branch into `main`, pushes, and deletes the branch locally and on the remote.
+- `/random-commit [context]`: groups pending changes into semantic commits by intent, then pushes. It respects your commit signing and stops on likely secrets in the diff.
+- `/random-merge-to-main`: fast-forward merges the current branch into `main` (asks before a merge commit), pushes, and deletes the branch locally and on the remote. It refuses when the remote branch has commits you don't have.
 
 In OpenCode, `opencode/commands/` provides `/random-commit` and `/random-merge-to-main` as thin wrappers that load these skills.
 
